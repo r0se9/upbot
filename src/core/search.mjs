@@ -19,6 +19,7 @@ async function resolveJob(job){
 	const results = await Promise.all([
 		(async ()=>{
 				const result = await upwork.getJobOpening(job.uid)
+				
 				const re = {
 					uid: job.uid,
 					isFixed: job.isFixed,
@@ -53,7 +54,7 @@ async function iterate(){
 	const result = await upwork.getJobs();
 	console.log(result.results);
 	const jobs = result.results.map(el=>{
-	const result = {uid: el.uid, category: el.occupations, client: el.client, title: el.title, createdOn: el.createdOn, link: el.ciphertext };
+	const result = {uid: el.uid, category: el.occupations, client: el.client, title: el.title, publishedOn: el.publishedOn, link: el.ciphertext };
 	const isFixed = el.amount.amount ? true: false;
 	result.isFixed = isFixed;
 	if(isFixed){

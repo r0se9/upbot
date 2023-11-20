@@ -18,12 +18,14 @@ async function request(page, url, headers, data) {
   return data
     ? await page.evaluate(
         async (e, t, a) => {
+          console.log(a)
           const response = await fetch(e, {
             method: "POST",
             headers: t,
             credentials: "include",
             body: JSON.stringify(a),
           });
+          console.log(response)
           return response.ok ? await response.json() : null;
         },
         url,
@@ -177,16 +179,17 @@ export default class Browser{
     	const response = await request(this.page, "https://www.upwork.com/ab/proposals/api/openings/" + id, headers)
     	return response;
 	}
-	async applyForJob(id, {coverLetter, questions, chargedAmount, estimatedDuration, isFixed }){
+	async applyJob(uid, {link, coverLetter, questions, amount, estimatedDuration, isFixed }){
+    await this.page.goto(`https://www.upwork.com/ab/proposals/job/${link}/apply`)
 
-		data = {
+		const data = {
       		version: 3,
-      		jobReference: response["opening"]["job"]["openingUid"],
+      		jobReference: uid,
       		agency: null,
-      		chargedAmount:chargedAmount,
+      		chargedAmount: amount,
       		coverLetter: coverLetter,
       		earnedAmount: null,
-      		estimatedDuration: null,
+      		estimatedDuration: estimatedDuration,
       		occupationUID: null,
       		portfolioItemUids: [],
       		attachments: [],
@@ -197,18 +200,15 @@ export default class Browser{
         		uid: this.AUTH["uid"],
         		oDeskUserID: this.AUTH["oDeskUserID"],
       		},
-      		profileRateToSet: ![],
+      		profileRateToSet: false,
       		boostBidAmount: 50,
       		rateGuidance: null,
       		agencyOrgUid: null,
     	};
-    	if(isFixed){ 
+    	if(!isFixed){ 
     		data['sri'] = { percent: 0, frequency: 0 };
-    	} else {
-    		const res = await request(this.page, "https://www.upwork.com/ab/proposals/api/v4/job/details/" + id, headers);
-    		data.estimatedDuration = estimatedDuration || res.context.engagementDurationsList[3]
-
     	}
+      console.log(data)
     	const headers = {
       		Accept: "application/json, text/plain, */*",
       		"Accept-Encoding": "gzip, deflate, br",
@@ -221,7 +221,10 @@ export default class Browser{
       		"x-requested-with": "XMLHttpRequest",
       		"X-Upwork-Accept-Language": "en-US",
     	};
-    	await request(this.page, 'https://www.upwork.com/ab/proposals/api/disintermediation/apply', headers);
+    	const re = await request(this.page, 'https://www.upwork.com/ab/proposals/api/disintermediation/apply', headers);
+      const re = await request(this.page, 'https://www.upwork.com/ab/proposals/api/disintermediation', headers);
+      const re = await request(this.page, 'https://www.upwork.com/ab/proposals/api/disintermediation/apply', headers);
+      console.log(re)
     	const result = await request(this.page, "https://www.upwork.com/ab/proposals/api/v2/application/new", headers, data)
     	console.log(result);
 

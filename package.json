@@ -12,6 +12,7 @@
   "dependencies": {
     "dotenv": "^16.3.1",
     "mongodb": "^6.3.0",
+    "openai": "^4.19.0",
     "puppeteer-extra": "^3.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "puppeteer-utilz": "^4.0.8",

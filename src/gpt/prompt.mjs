@@ -1,3 +1,3 @@
-export default function getPrompt({description}){
+export function getPrompt({description}){
 	return `${description}`
 }
