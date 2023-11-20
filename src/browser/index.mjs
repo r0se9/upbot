@@ -52,7 +52,7 @@ export default class Browser{
      		 "--start-maximized"
      		 ],
     		headless: false,
-    		devtools: true
+    		// devtools: true
     	};
     	if(process.env.HEADLESS==='ON') options.headless = 'new'
     	if (process.platform == "linux") options.args.push("--no-sandbox");
@@ -64,6 +64,17 @@ export default class Browser{
   		// const pages = await this.browser.pages();
   		// this.page = pages[0];
   		this.page = await this.browser.newPage();
+      await this.page.setRequestInterception(true);
+      this.page.on('request', (request) => {
+        // Use the resourceType method to determine the type of the request
+        if (request.resourceType() === 'image' || request.resourceType() === 'stylesheet') {
+          // Abort requests for images or stylesheets
+          request.abort();
+        } else {
+          // Continue with all other requests
+          request.continue();
+      }
+    });
   		await this.page.setDefaultNavigationTimeout(100000);
   		await this.page.goto(this.AUTH_URL);
   		console.log('========= Rendered Page ==========')
@@ -94,6 +105,46 @@ export default class Browser{
   		}
   		this.AUTH = result;
 	}
+  async getMe(){
+    const url ='https://www.upwork.com/freelancers/api/v1/profile/me/fwh';
+    const headers = {
+          "Accept": "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Authorization": "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+        };
+        const response = await request(this.page, url, headers);
+        return response;
+  }
+  async getJobDetail({link}){
+    const headers = {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          Authorization: "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+      };
+      const url = 'https://www.upwork.com/ab/proposals/api/v4/job/details/' + link;
+      const res = await request(this.page, "https://www.upwork.com/ab/proposals/api/v4/job/details/" + link, headers);
+      return ({
+        engagementDurationsList: res.context.engagementDurationsList,
+        idVerificationRequired: res.context.idVerificationNeeded,
+        idvRequiredByOpening: res.context.idvRequiredByOpening,
+        phoneVerificationNeeded: res.context.phoneVerificationNeeded,
+      })
+  }
+
 	async getJobs(){
 		const headers = {
       		"Accept": "application/json, text/plain, */*",
@@ -110,7 +161,7 @@ export default class Browser{
       	const response = await request(this.page, process.env.MOST_RECENT_URL, headers);
       	return response;
 	}
-	async getJobDetail(id){
+	async getJobOpening(id){
 		const headers = {
       		Accept: "application/json, text/plain, */*",
       		"Accept-Encoding": "gzip, deflate, br",

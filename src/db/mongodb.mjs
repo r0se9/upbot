@@ -35,6 +35,16 @@ class Database{
       console.error('[ERR] ', e);
     }
   }
+  async createMany(collectionName, documents){
+    const db = this.client.db(this.dbName);
+    const collection = db.collection(collectionName);
+    try{
+      const doc = await collection.insertMany(documents.map(el=>({...el, createdAt: new Date()})));
+      return doc;
+    } catch(e){
+      console.error('[ERR] ', e);
+    }
+  }
   async update(collectionName, filter, document){
     const db = this.client.db(this.dbName);
     const collection = db.collection(collectionName);
