@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 import Browser from '../browser/index.mjs'
 import Database from '../db/mongodb.mjs'
 dotenv.config()
-const upwork = new Browser('w7b6931a7a712b9196daabe6c@machaimichaelenterprise.com', 'P@ssw0rd123123');
+const upwork = new Browser('mail.61b624c6e783763@pleasenospam.email', 'P@ssw0rd123123', true);
 const database = new Database(process.env.MONBO_URI)
 await database.connect();
 await upwork.start();
@@ -19,7 +19,7 @@ async function resolveJob(job){
 	const results = await Promise.all([
 		(async ()=>{
 				const result = await upwork.getJobOpening(job.uid)
-				
+
 				const re = {
 					uid: job.uid,
 					isFixed: job.isFixed,
@@ -37,7 +37,6 @@ async function resolveJob(job){
 						contact: result.organization.contact,
 						timezone: result.organization.timezoneName,
 					},
-					isAvailable: 'NS',
 				}
 				return re;
 				
@@ -49,11 +48,10 @@ async function resolveJob(job){
 	return ({...results[0], ...results[1]})
 
 }
-async function iterate(){
+async function scrap(){
 	// get jobs
 	const result = await upwork.getJobs();
-	console.log(result.results);
-	const jobs = result.results.map(el=>{
+	const jobs = result.map(el=>{
 	const result = {uid: el.uid, category: el.occupations, client: el.client, title: el.title, publishedOn: el.publishedOn, link: el.ciphertext };
 	const isFixed = el.amount.amount ? true: false;
 	result.isFixed = isFixed;
@@ -70,19 +68,25 @@ async function iterate(){
 	const uids = jobs.map(el=>el.uid);
 	// check unsaved uids
 	const saved = await database.get('jobs', {uid: {'$in':uids}});
-	const newJobs  = jobs.filter(el=>!saved.includes(el.uid));
+	const savedUids = saved.map(el=>el.uid);
+	const newJobs  = jobs.filter(el=>!savedUids.includes(el.uid));
 	console.log(`================= There are ${newJobs.length} new Jobs found =================`)
+	if(newJobs.length===0) return;
 	const jobList = [];
 	for(let index in newJobs){
 		const job = await resolveJob(newJobs[index]);
 		jobList.push(job);
 	}
 	await database.createMany('jobs', jobList);
-	const data = await upwork.getMe();
-	console.log(data)
+	// const data = await upwork.getConnects();
+	// console.log(data)
 	
 }
-await iterate();
+async function main(){
+	await scrap();
+	setTimeout(main, 10000);
+}
+await main();
 process.on('exit', ()=>{
 	console.log('xxxx close database xxxx')
 	database.close();

@@ -45,11 +45,11 @@ class Database{
       console.error('[ERR] ', e);
     }
   }
-  async update(collectionName, filter, document){
+  async update(collectionName, filter, setQuery){
     const db = this.client.db(this.dbName);
     const collection = db.collection(collectionName);
     try{
-      const result  = await collection.updateMany(filter, { '$set': document }, { upsert: true });
+      const result  = await collection.updateMany(filter, setQuery, { upsert: true });
       return result ;
     } catch(e){
       console.error('[ERR] ', e);

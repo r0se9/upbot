@@ -14,55 +14,62 @@ async function input(page, selector, text, delay = 0) {
   	await page.waitForSelector(selector);
    	await page.type(selector, text, { delay });
 }
-async function request(page, url, headers, data) {
-  return data
-    ? await page.evaluate(
-        async (e, t, a) => {
-          console.log(a)
-          const response = await fetch(e, {
-            method: "POST",
-            headers: t,
-            credentials: "include",
-            body: JSON.stringify(a),
-          });
-          console.log(response)
-          return response.ok ? await response.json() : null;
+async function request(page, method, url, headers, data) {
+  const config = {method, headers, credentials: 'include'};
+  if(method==='POST')config.body = JSON.stringify(data || {});
+  return await page.evaluate(
+        async (e, c) => {
+          try{
+            const response = await fetch(e, c);
+            if(response.ok){
+              const d = await response.json()
+              return ({
+                status: 'success',
+                data: d
+              })
+            }              
+            else{
+            const d = await response.json();
+            return ({
+                status: 'error',
+                data: d
+                })}
+          }catch(err){
+            return ({
+              status: 'error',
+              data: err
+            })
+
+          }
         },
         url,
-        headers,
-        data
-      )
-    : await page.evaluate(
-        async (e, t) => {
-          const response = await fetch(e, { headers: t, credentials: "include" });
-          return response.ok ? await response.json() : null;
-        },
-        url,
-        headers
+        config
       );
 }
 export default class Browser{
 	AUTH_URL = 'https://www.upwork.com/ab/account-security/login?redir=%2Fnx%2Ffind-work%2Fmost-recent'
-	constructor(user, password){
+	constructor(user, password, headless=false){
 		this.user = user;
 		this.password = password;
+    this.headless = headless;
+    
 	}
-	async start(){
-		const options = {
-    		defaultViewport: null,
-    		args: [
-     		 "--start-maximized"
-     		 ],
-    		headless: false,
-    		// devtools: true
-    	};
-    	if(process.env.HEADLESS==='ON') options.headless = 'new'
-    	if (process.platform == "linux") options.args.push("--no-sandbox");
-    	this.browser = await puppeteer.launch(options);
-  		this.browser.on("disconnected", async () => {
-    		console.log("BROWSER CRASH");
-    		if (this.browser && this.browser.process() != null) this.browser.process().kill("SIGINT");
-  		});
+	async start(startUrl = this.AUTH_URL){
+		  const options = {
+        defaultViewport: null,
+        args: [
+         "--start-maximized"
+         ],
+        headless: this.headless? 'new': false,
+        devtools: true
+      };
+      if(process.env.HEADLESS==='ON') options.headless = 'new'
+      if (process.platform == "linux") options.args.push("--no-sandbox");
+      this.browser = await puppeteer.launch(options);
+      this.browser.on("disconnected", async () => {
+        console.log("BROWSER CRASH");
+        if (this.browser && this.browser.process() != null) this.browser.process().kill("SIGINT");
+      });
   		// const pages = await this.browser.pages();
   		// this.page = pages[0];
   		this.page = await this.browser.newPage();
@@ -78,7 +85,7 @@ export default class Browser{
       }
     });
   		await this.page.setDefaultNavigationTimeout(100000);
-  		await this.page.goto(this.AUTH_URL);
+  		await this.page.goto(startUrl);
   		console.log('========= Rendered Page ==========')
   		// TIMER
   		await input(this.page, '#login_username', this.user);
@@ -86,7 +93,7 @@ export default class Browser{
   			component: this.page,
   			selector: '#login_password_continue'
   		});
-  		await wait(1000);
+  		await wait(1500);
   		await input(this.page, '#login_password', this.password);
   		await Promise.all([this.page.waitForNavigation(),
   			click({
@@ -95,8 +102,19 @@ export default class Browser{
   			})])
   		console.log('========= Got In ==========')
   		}
-  		
-  	async getAuth(){
+  async close(){
+    await Promise.race([
+      this.browser.close(),
+      wait(2000)
+      ]);
+    if (this.browser && this.browser.process() != null) {
+      console.log('xxxx Close Browser Forcefully!!! xxxxx')
+      this.browser.process().kill('SIGINT');
+    }
+    
+
+  }
+  async getAuth(){
   		const result = { token: "", oauth: "", uid: "", oDeskUserID: "" };
   		const cookies = await this.page.cookies();
   		for (const cookie of cookies) {
@@ -107,11 +125,27 @@ export default class Browser{
   		}
   		this.AUTH = result;
 	}
-  async getMe(){
-    const url ='https://www.upwork.com/freelancers/api/v1/profile/me/fwh';
+  async getConnects(){
+    const url ='https://www.upwork.com/api/graphql/v1';
+    const data = {
+    "query": `
+        query {
+            organization {
+                subscriptionPlan(filter: {
+                    includeNextPayment: false
+                    checkVat: false
+                    includePromo: false
+                }) {
+                    connectsBalance
+                }
+            }
+        }
+    `,
+    };
     const headers = {
-          "Accept": "application/json, text/plain, */*",
-          "Accept-Encoding": "gzip, deflate, br",
+          "Accept": "*/*",
+          "scheme": "https",
+          "Accept-Encoding": "gzip, deflate, br, zstd",
           "Accept-Language": "en-US,en;q=0.9",
           "Authorization": "Bearer " + this.AUTH["oauth"],
           "Sec-Fetch-Dest": "empty",
@@ -120,9 +154,18 @@ export default class Browser{
           "x-odesk-user-agent": "oDesk LM",
           "x-requested-with": "XMLHttpRequest",
           "X-Upwork-Accept-Language": "en-US",
+          "Vnd-Eo-Parent-Span-Id": "fd164737-735a-4f53-859d-244e7e28a079",
+          "Vnd-Eo-Span-Id": "d0c3a8d6-fbb7-4b8b-8e2d-085747e85172",
+          "Vnd-Eo-Trace-Id": "b8a7c3f2-986e-4950-8741-2291d1f482db",
+          "Vnd.Eo.Visitorid": "166.88.141.125.1699061103689000",
+          "X-Upwork-Accept-Language": "en-US",
+          "X-Upwork-Api-Tenantid": "1714659056479789057"
         };
-        const response = await request(this.page, url, headers);
+        const response = await request(this.page, url, headers, data);
         return response;
+  }
+  async navigate(link, option={}){
+    await this.page.goto(link, option);
   }
   async getJobDetail({link}){
     const headers = {
@@ -137,13 +180,12 @@ export default class Browser{
           "x-requested-with": "XMLHttpRequest",
           "X-Upwork-Accept-Language": "en-US",
       };
-      const url = 'https://www.upwork.com/ab/proposals/api/v4/job/details/' + link;
-      const res = await request(this.page, "https://www.upwork.com/ab/proposals/api/v4/job/details/" + link, headers);
+      const res = await request(this.page, "GET", "https://www.upwork.com/ab/proposals/api/v4/job/details/" + link, headers);
       return ({
-        engagementDurationsList: res.context.engagementDurationsList,
-        idVerificationRequired: res.context.idVerificationNeeded,
-        idvRequiredByOpening: res.context.idvRequiredByOpening,
-        phoneVerificationNeeded: res.context.phoneVerificationNeeded,
+        engagementDurationsList: res.data.context.engagementDurationsList,
+        idVerificationRequired: res.data.context.idVerificationNeeded,
+        idvRequiredByOpening: res.data.context.idvRequiredByOpening,
+        phoneVerificationNeeded: res.data.context.phoneVerificationNeeded,
       })
   }
 
@@ -160,8 +202,8 @@ export default class Browser{
       		"x-requested-with": "XMLHttpRequest",
       		"X-Upwork-Accept-Language": "en-US",
       	};
-      	const response = await request(this.page, process.env.MOST_RECENT_URL, headers);
-      	return response;
+      	const response = await request(this.page, "GET", process.env.MOST_RECENT_URL, headers);
+      	return response.data.results;
 	}
 	async getJobOpening(id){
 		const headers = {
@@ -176,12 +218,10 @@ export default class Browser{
       		"x-requested-with": "XMLHttpRequest",
       		"X-Upwork-Accept-Language": "en-US",
     	};
-    	const response = await request(this.page, "https://www.upwork.com/ab/proposals/api/openings/" + id, headers)
-    	return response;
+    	const response = await request(this.page, "GET", "https://www.upwork.com/ab/proposals/api/openings/" + id, headers)
+    	return response.data;
 	}
 	async applyJob(uid, {link, coverLetter, questions, amount, estimatedDuration, isFixed }){
-    await this.page.goto(`https://www.upwork.com/ab/proposals/job/${link}/apply`)
-
 		const data = {
       		version: 3,
       		jobReference: uid,
@@ -208,25 +248,23 @@ export default class Browser{
     	if(!isFixed){ 
     		data['sri'] = { percent: 0, frequency: 0 };
     	}
-      console.log(data)
     	const headers = {
       		Accept: "application/json, text/plain, */*",
-      		"Accept-Encoding": "gzip, deflate, br",
-      		"Accept-Language": "en-US,en;q=0.9",
-      		Authorization: "Bearer " + this.AUTH["oauth"],
-      		"Sec-Fetch-Dest": "empty",
-      		"Sec-Fetch-Mode": "cors",
-      		"Sec-Fetch-Site": "same-origin",
-      		"x-odesk-user-agent": "oDesk LM",
-      		"x-requested-with": "XMLHttpRequest",
-      		"X-Upwork-Accept-Language": "en-US",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Accept-Language": "en-US,en;q=0.9",
+      Authorization: "Bearer " + this.AUTH["oauth"],
+      "Content-Type": "application/json",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
+      "x-odesk-csrf-token": this.AUTH["token"],
+      "x-odesk-user-agent": "oDesk LM",
+      "x-requested-with": "XMLHttpRequest",
+      "X-Upwork-Accept-Language": "en-US",
     	};
-    	const re = await request(this.page, 'https://www.upwork.com/ab/proposals/api/disintermediation/apply', headers);
-      const re = await request(this.page, 'https://www.upwork.com/ab/proposals/api/disintermediation', headers);
-      const re = await request(this.page, 'https://www.upwork.com/ab/proposals/api/disintermediation/apply', headers);
-      console.log(re)
-    	const result = await request(this.page, "https://www.upwork.com/ab/proposals/api/v2/application/new", headers, data)
+    	const result = await request(this.page, "POST", "https://www.upwork.com/ab/proposals/api/v2/application/new", headers, data)
     	console.log(result);
+      return result;
 
 
 

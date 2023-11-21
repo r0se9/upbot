@@ -21,12 +21,11 @@ export default class GPT{
 			return text.choices[0].message.content;
 
 		} catch(e){
-			console.log(e.message)
 			return DEFAULT_MESSAGE;
 		}
 
 	}
-	async getAnswer(question){
+	getAnswer(question){
 		return 'Sure, I can.'
 	}
 }
