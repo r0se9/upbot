@@ -153,6 +153,12 @@ async function main(){
 			console.log(chalk.red('>>>> Job needs ID verification'));
 			await database.update('jobs', {uid: job.uid}, { '$set': { idvRequiredByOpening: true }});
 			await database.delete('accounts', { email:account.email })
+
+		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_ThisJobIsNoLongerAvailable'){
+
+			console.log(chalk.red('>>>> Job is no longer Available.'));
+			await database.update('jobs', {uid: job.uid}, { '$set': { isPrivate: true }});
+
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultServerError_ErrorMessage'){
 			
 				console.log(chalk.red('Server is temporarily down. Try again in a while.'))
