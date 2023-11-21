@@ -47,7 +47,7 @@ async function getAccounts() {
 	return accounts;
 }
 async function getJobs(user){
-	const jobs = await database.get('jobs', { idvRequiredByOpening: false, users: { $ne: user }, isPrivate: { $ne: true }}, { publishedOn: -1 });
+	const jobs = await database.get('jobs', { idvRequiredByOpening: false, users: { $ne: user }, isPrivate: { $ne: true }}, { sort: { publishedOn: -1 }});
 	return jobs;
 }
 async function apply(agent, job){
@@ -107,10 +107,10 @@ async function main(){
 		const upwork = new Browser(account.email, process.env.PASSWORD, !DEBUG);
 		const [_, coverLetter] = await Promise.all([
 			 (async ()=> {
-						await upwork.start();
+						await upwork.start(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`);
 						await upwork.getAuth();
-						await upwork.navigate(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`)
-						await upwork.getAuth();
+						// await upwork.navigate(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`)
+						// await upwork.getAuth();
 					})(),
 					gpt.prompt(getPrompt(job.description))
 					])
