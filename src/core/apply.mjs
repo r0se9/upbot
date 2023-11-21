@@ -47,7 +47,7 @@ async function getAccounts() {
 	return accounts;
 }
 async function getJobs(user){
-	const jobs = await database.get('jobs', { idvRequiredByOpening: false, users: { $ne: user }, isPrivate: { $ne: true }}, { publishedOn: -1 });
+	const jobs = await database.get('jobs', { idvRequiredByOpening: false, users: { $ne: user }, isPrivate: { $ne: true }}, { sort: { publishedOn: -1 }});
 	return jobs;
 }
 async function apply(agent, job){
