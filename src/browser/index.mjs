@@ -208,12 +208,7 @@ export default class Browser{
           "X-Upwork-Accept-Language": "en-US",
       };
       const res = await request(this.page, "GET", "https://www.upwork.com/ab/proposals/api/v4/job/details/" + link, headers);
-      return ({
-        engagementDurationsList: res.data.context.engagementDurationsList || [],
-        idVerificationRequired: res.data.context.idVerificationNeeded || false,
-        idvRequiredByOpening: res.data.context.idvRequiredByOpening || false,
-        phoneVerificationNeeded: res.data.context.phoneVerificationNeeded || false,
-      })
+      return res;
   }
 
 	async getJobs(){

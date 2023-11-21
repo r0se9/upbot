@@ -42,8 +42,14 @@ async function resolveJob(job){
 				
 			})(),
 	(async ()=>{
-			const result = await upwork.getJobDetail({link: job.link});
-			return result;
+			const res = await upwork.getJobDetail({link: job.link});
+
+			return ({
+        engagementDurationsList: res.data.context.engagementDurationsList || [],
+        idVerificationRequired: res.data.context.idVerificationNeeded || false,
+        idvRequiredByOpening: res.data.context.idvRequiredByOpening || false,
+        phoneVerificationNeeded: res.data.context.phoneVerificationNeeded || false,
+      });
 		})()]);
 	return ({...results[0], ...results[1]})
 
