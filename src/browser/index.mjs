@@ -248,7 +248,7 @@ export default class Browser{
     	const response = await request(this.page, "GET", "https://www.upwork.com/ab/proposals/api/openings/" + id, headers)
     	return response.data;
 	}
-	async applyJob(uid, {link, coverLetter, questions, amount, estimatedDuration, isFixed }){
+	async applyJob(uid, {link, coverLetter, questions, amount, estimatedDuration, isFixed, connects }){
 		const data = {
       		version: 3,
       		jobReference: uid,
@@ -268,7 +268,7 @@ export default class Browser{
         		oDeskUserID: this.AUTH["oDeskUserID"],
       		},
       		profileRateToSet: false,
-      		boostBidAmount: 50,
+      		boostBidAmount: connects,
       		rateGuidance: null,
       		agencyOrgUid: null,
     	};
@@ -323,6 +323,6 @@ export default class Browser{
 
     } 
     const result = await request(this.page, "POST", url, headers, data);
-    result;
+    return result;
   }
 }
