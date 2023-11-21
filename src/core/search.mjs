@@ -12,12 +12,6 @@ await upwork.start();
 const authInfo = await upwork.getAuth();
 
 
-// const ids = jobs.map(el=>el.uid);
-// await Promise.all(ids.map(async el=>{
-// const jobinfo = await upwork.getJobDetail(el)	
-// console.log(el, jobinfo)
-// }))
-// console.log(jobs)
 async function resolveJob(job){
 	const results = await Promise.all([
 		(async ()=>{
@@ -28,6 +22,7 @@ async function resolveJob(job){
 					isFixed: job.isFixed,
 					budget: job.budget,
 					link: job.link,
+					publishedOn: job.publishedOn,
 					category: job.category,
 					isPrivate: result.opening.job.info.isPtcPrivate,
 					isPremium: result.opening.job.info.premium,
@@ -57,7 +52,7 @@ async function scrap(){
 	// get jobs
 	const result = await upwork.getJobs();
 	const jobs = result.map(el=>{
-	const result = {uid: el.uid, category: el.occupations, client: el.client, title: el.title, publishedOn: el.publishedOn, link: el.ciphertext };
+	const result = {uid: el.uid, category: el.occupations, client: el.client, title: el.title, publishedOn: el.renewedOn ? el.renewedOn : el.publishedOn, link: el.ciphertext };
 	const isFixed = el.amount.amount ? true: false;
 	result.isFixed = isFixed;
 	if(isFixed){
