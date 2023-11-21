@@ -35,11 +35,21 @@ class Database{
       console.error('[ERR] ', e);
     }
   }
-  async update(collectionName, filter, document){
+  async createMany(collectionName, documents){
     const db = this.client.db(this.dbName);
     const collection = db.collection(collectionName);
     try{
-      const result  = await collection.updateMany(filter, { '$set': document }, { upsert: true });
+      const doc = await collection.insertMany(documents.map(el=>({...el, createdAt: new Date()})));
+      return doc;
+    } catch(e){
+      console.error('[ERR] ', e);
+    }
+  }
+  async update(collectionName, filter, setQuery){
+    const db = this.client.db(this.dbName);
+    const collection = db.collection(collectionName);
+    try{
+      const result  = await collection.updateMany(filter, setQuery, { upsert: true });
       return result ;
     } catch(e){
       console.error('[ERR] ', e);
