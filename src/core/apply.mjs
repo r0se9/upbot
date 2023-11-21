@@ -107,10 +107,10 @@ async function main(){
 		const upwork = new Browser(account.email, process.env.PASSWORD, !DEBUG);
 		const [_, coverLetter] = await Promise.all([
 			 (async ()=> {
-						await upwork.start();
+						await upwork.start(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`);
 						await upwork.getAuth();
-						await upwork.navigate(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`)
-						await upwork.getAuth();
+						// await upwork.navigate(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`)
+						// await upwork.getAuth();
 					})(),
 					gpt.prompt(getPrompt(job.description))
 					])
