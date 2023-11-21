@@ -92,7 +92,7 @@ export default class Browser{
          "--start-maximized"
          ],
         headless: this.headless? 'new': false,
-        devtools: true
+        devtools: false
       };
       if(process.env.HEADLESS==='ON') options.headless = 'new'
       if (process.platform == "linux") options.args.push("--no-sandbox");
