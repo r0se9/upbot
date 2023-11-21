@@ -26,6 +26,8 @@ async function resolveJob(job){
 					budget: job.budget,
 					link: job.link,
 					category: job.category,
+					isPrivate: result.opening.job.info.isPtcPrivate,
+					isPremium: result.opening.job.info.premium,
 					questions: result.questions.questions,
 					title: result.opening.title,
 					description: result.opening.description,

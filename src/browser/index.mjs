@@ -46,6 +46,37 @@ async function request(page, method, url, headers, data) {
         config
       );
 }
+async function graphql(page, url, headers, data){
+  const config = {method: 'POST', headers, credentials: 'include', body: JSON.stringify(data)};
+  return await page.evaluate(
+        async (e, c) => {
+          try{
+            const response = await fetch(e, c);
+            if(response.ok){
+              const d = await response.json()
+              return ({
+                status: 'success',
+                data: d
+              })
+            }              
+            else{
+            const d = await response.json();
+            return ({
+                status: 'error',
+                data: d
+                })}
+          }catch(err){
+            return ({
+              status: 'error',
+              data: err
+            })
+
+          }
+        },
+        url,
+        config
+      );
+}
 export default class Browser{
 	AUTH_URL = 'https://www.upwork.com/ab/account-security/login?redir=%2Fnx%2Ffind-work%2Fmost-recent'
 	constructor(user, password, headless=false){
@@ -122,6 +153,8 @@ export default class Browser{
     		if (cookie["name"] === "oauth2_global_js_token") result["oauth"] = cookie["value"];
     		if (cookie["name"] === "user_uid") result["uid"] = cookie["value"];
     		if (cookie["name"] === "console_user") result["oDeskUserID"] = cookie["value"];
+        if (cookie['path'] === '/nx/find-work/') result['fwToken'] = cookie['value'];
+        if (cookie['path'] === '/nx/') result['nxToken'] = cookie['value'];
   		}
   		this.AUTH = result;
 	}
@@ -147,19 +180,13 @@ export default class Browser{
           "scheme": "https",
           "Accept-Encoding": "gzip, deflate, br, zstd",
           "Accept-Language": "en-US,en;q=0.9",
-          "Authorization": "Bearer " + this.AUTH["oauth"],
+          "Authorization": "bearer " + this.AUTH["boostToken"],
           "Sec-Fetch-Dest": "empty",
           "Sec-Fetch-Mode": "cors",
           "Sec-Fetch-Site": "same-origin",
           "x-odesk-user-agent": "oDesk LM",
           "x-requested-with": "XMLHttpRequest",
-          "X-Upwork-Accept-Language": "en-US",
-          "Vnd-Eo-Parent-Span-Id": "fd164737-735a-4f53-859d-244e7e28a079",
-          "Vnd-Eo-Span-Id": "d0c3a8d6-fbb7-4b8b-8e2d-085747e85172",
-          "Vnd-Eo-Trace-Id": "b8a7c3f2-986e-4950-8741-2291d1f482db",
-          "Vnd.Eo.Visitorid": "166.88.141.125.1699061103689000",
-          "X-Upwork-Accept-Language": "en-US",
-          "X-Upwork-Api-Tenantid": "1714659056479789057"
+          "X-Upwork-Accept-Language": "en-US"
         };
         const response = await request(this.page, url, headers, data);
         return response;
@@ -182,10 +209,10 @@ export default class Browser{
       };
       const res = await request(this.page, "GET", "https://www.upwork.com/ab/proposals/api/v4/job/details/" + link, headers);
       return ({
-        engagementDurationsList: res.data.context.engagementDurationsList,
-        idVerificationRequired: res.data.context.idVerificationNeeded,
-        idvRequiredByOpening: res.data.context.idvRequiredByOpening,
-        phoneVerificationNeeded: res.data.context.phoneVerificationNeeded,
+        engagementDurationsList: res.data.context.engagementDurationsList || [],
+        idVerificationRequired: res.data.context.idVerificationNeeded || false,
+        idvRequiredByOpening: res.data.context.idvRequiredByOpening || false,
+        phoneVerificationNeeded: res.data.context.phoneVerificationNeeded || false,
       })
   }
 
@@ -263,10 +290,39 @@ export default class Browser{
       "X-Upwork-Accept-Language": "en-US",
     	};
     	const result = await request(this.page, "POST", "https://www.upwork.com/ab/proposals/api/v2/application/new", headers, data)
-    	console.log(result);
       return result;
 
 
 
 	}
+  async boost(connects, total, endDate){
+    const url = 'https://www.upwork.com/api/graphql/v1';
+    const headers = {
+        Accept: "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          Authorization: "bearer " + this.AUTH["nxToken"],
+          "Sec-Fetch-Dest": "empty",
+          "Content-Type": 'application/json',
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+    };
+    const data = {
+    query: "mutation createAd($l1CategoryId: ID, $l3CategoryId: ID, $bidConnects: Int, $dailyBudget: Int, $endDate: String, $totalBudget: Int) {\n  createAd: createAdUnified(\n    input: {targeting: {l1CategoryId: $l1CategoryId, l3CategoryId: $l3CategoryId}, ad: {bidConnects: $bidConnects, dailyBudget: $dailyBudget, endDate: $endDate, name: \"frontend\", placement: MERCHANDISED_FL_SEARCH, targetingId: null, totalBudget: $totalBudget, type: BOOSTED_PROFILE}}\n  ) {\n    ad {\n      id\n    }\n  }\n}",
+    variables: {
+        l1CategoryId: "531770282580668420",
+        l3CategoryId: "1110580752293548032",
+        bidConnects: connects||2,
+        dailyBudget: null,
+        endDate: endDate || "2024-01-01",
+        totalBudget: total || 2
+    }
+
+    } 
+    const result = await request(this.page, "POST", url, headers, data);
+    result;
+  }
 }
