@@ -3,13 +3,21 @@ import dotenv from 'dotenv';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import chalk from 'chalk';
+import { decorate } from '../utils/decorator.mjs'
 import Browser from '../browser/index.mjs';
 import Database from '../db/mongodb.mjs';
-import { getPrompt } from '../gpt/prompt.mjs';
+import { getPrompt } from '../gpt/prompt.config.mjs';
 import GPT from '../gpt/index.mjs';
 import { wait } from '../utils/time.mjs';
 dotenv.config()
+decorate();
 const argv = yargs(hideBin(process.argv))
+.option('debug', {
+    alias: 'd',
+    description: 'Run this code in debug mode',
+    type: 'boolean',
+    default: false
+  })
   .option('user', {
     alias: 'u',
     description: 'Enter your name',
@@ -27,6 +35,7 @@ const argv = yargs(hideBin(process.argv))
   .argv;
 const user = argv.user;
 const mode = argv.mode;
+const DEBUG = (argv.debug && argv.debug === true) ? true : false;
 
 
 const database = new Database(process.env.MONBO_URI)
@@ -69,7 +78,9 @@ async function boost(agent, total){
 	await agent.navigate('https://www.upwork.com/nx/boost-profile');
 	await agent.getAuth();
 	const result = await agent.boost(total, total, '2023-12-31');
-	console.log(result.data);
+	if(result.data && result.data.data && result.data.data.createAd !== null){
+		console.log(chalk.green('>>> Successfully boosted :)'))
+	}
 }
 
 
@@ -91,19 +102,21 @@ async function main(){
 		const account = accounts[0];
 		const job = jobs[0];
 		console.log(`> ${account.email}`)
-		console.log('Title:' + chalk.green(job.title));
+		console.log('Title: ' + chalk.green(job.title));
 
-		const upwork = new Browser(account.email, process.env.PASSWORD, false);
+		const upwork = new Browser(account.email, process.env.PASSWORD, !DEBUG);
 		const [_, coverLetter] = await Promise.all([
 			 (async ()=> {
-						await upwork.start(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`);
+						await upwork.start();
+						await upwork.getAuth();
+						await upwork.navigate(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`)
 						await upwork.getAuth();
 					})(),
 					gpt.prompt(getPrompt(job.description))
 					])
 		await upwork.getAuth();
 		const result = await upwork.applyJob(job.uid, {
-			boost: (mode === 'speed') ? 50: 30,
+			connects: (mode === 'speed') ? 50: 30,
 			link: job.link,
 			coverLetter,
 			questions: job.questions.map(el=>({...el, answer: gpt.getAnswer(el.question)})),
@@ -117,41 +130,43 @@ async function main(){
 			await boost(upwork, 20);
 		}
 		await Promise.all([
-			database.update('jobs', {uid: job.uid}, { '$push': { users: account.email }}), 
+			database.update('jobs', {uid: job.uid}, { '$push': { users: user }}), 
 			database.update('accounts', { email: account.email },{ '$set': { status: 'applied'}})
 			]);
 		await upwork.close();
 		// await database.
-	}else{
+	} else {
 		console.log(chalk.red('============ Application Failed ==========='));
 		
 		if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultForbidden_ErrorMessage'){
 			// In this case, job is transferred to private, you cannot bid to that.....
-			const result = await upwork.getJobOpening(job.uid)
-			if(result.flSuspended){
+			const opening = await upwork.getJobOpening(job.uid)
+			if(opening.flSuspended){
 				console.log(chalk.red('>>>> Account is restricted'));
 				await database.delete('accounts', { email:account.email })
-			}else if(result.opening.job.info.isPtcPrivate){
+			}else if(opening.opening.job.info.isPtcPrivate){
 				console.log(chalk.red('>>>> Job is private only'))
 				await database.update('jobs', {uid: job.uid}, { '$set': { isPrivate: true }});
 			}
 			
-		}else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_TNSJobIDVerificationRequired'){
+		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_TNSJobIDVerificationRequired'){
 			console.log(chalk.red('>>>> Job needs ID verification'));
 			await database.update('jobs', {uid: job.uid}, { '$set': { idvRequiredByOpening: true }});
 			await database.delete('accounts', { email:account.email })
+		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultServerError_ErrorMessage'){
+			
+				console.log(chalk.red('Server is temporarily down. Try again in a while.'))
+				await wait(5 * 60 * 1000);	
 		}
-			else{
+		 else{
 			console.log(result.data);
 			await wait(10* 1000);	
 		}
-		// database.update('accounts', { email: account.email }, { '$set': { status: 'error'}})
-		
-		// await upwork.start();
 		await upwork.close();
 	}
 	}
 }
+
 while(true){
 	await main();
 }

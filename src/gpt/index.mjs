@@ -1,5 +1,4 @@
 // get answers for the question
-import { getPrompt } from './prompt.mjs';
 import OpenAI from 'openai';
 const DEFAULT_MESSAGE = 'Hello, client. I can do this perfectly because I have skills as well as experiences.'
 export default class GPT{
