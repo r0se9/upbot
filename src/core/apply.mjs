@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import chalk from 'chalk';
+import moment from 'moment-timezone';
 import { decorate } from '../utils/decorator.mjs'
 import Browser from '../browser/index.mjs';
 import Database from '../db/mongodb.mjs';
@@ -47,7 +48,13 @@ async function getAccounts() {
 	return accounts;
 }
 async function getJobs(user){
-	const jobs = await database.get('jobs', { idvRequiredByOpening: false, users: { $ne: user }, isPrivate: { $ne: true }}, { sort: { publishedOn: -1 }});
+	const timeLimit = moment().subtract(process.env.LIMIT, 'hours').tz('UTC').format();	
+	const jobs = await database.get('jobs', { 
+		idvRequiredByOpening: false, 
+		users: { $ne: user }, 
+		isPrivate: { $ne: true },
+		publishedOn: { $gte: timeLimit },
+	}, { sort: { publishedOn: -1 }});
 	return jobs;
 }
 async function apply(agent, job){
@@ -102,7 +109,9 @@ async function main(){
 		const account = accounts[0];
 		const job = jobs[0];
 		console.log(`> ${account.email}`)
-		console.log('Title: ' + chalk.green(job.title));
+		console.log('Title: ' + chalk.green(job.title) + ' ' + 
+			moment().diff(job.publishedOn) / 1000
+		+ ' sec ago');
 
 		const upwork = new Browser(account.email, process.env.PASSWORD, !DEBUG);
 		const [_, coverLetter] = await Promise.all([
@@ -158,6 +167,16 @@ async function main(){
 
 			console.log(chalk.red('>>>> Job is no longer Available.'));
 			await database.update('jobs', {uid: job.uid}, { '$set': { isPrivate: true }});
+
+		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJF_JA_2'){
+
+			console.log(chalk.red('>>>> Job is no longer Available.'));
+			await database.update('jobs', {uid: job.uid}, { '$set': { isPrivate: true }});
+
+		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJF_CONN_1'){
+
+			console.log(chalk.red('>>>> Insufficient connects....'));
+			database.update('accounts', { email: account.email },{ '$set': { status: 'applied'}})
 
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultServerError_ErrorMessage'){
 			
