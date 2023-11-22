@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import { decorate } from '../utils/decorator.mjs'
 dotenv.config()
 decorate();
-const upwork = new Browser('mail.61b624c6e783763@pleasenospam.email', 'P@ssw0rd123123', true);
+const upwork = new Browser('w4ecc9ffd1d0c8172bb70dd09@claudiaebacher.com', 'P@ssw0rd123123', true);
 const database = new Database(process.env.MONBO_URI)
 await database.connect();
 await upwork.start();
