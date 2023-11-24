@@ -116,7 +116,7 @@ export default class Browser{
       }
     });
   		await this.page.setDefaultNavigationTimeout(100000);
-  		await this.page.goto(startUrl);
+  		await this.page.goto(startUrl, { waitUntil: 'networkidle0' });
   		console.log('========= Rendered Page ==========')
   		// TIMER
   		await input(this.page, '#login_username', this.user);
@@ -142,8 +142,6 @@ export default class Browser{
       console.log('xxxx Close Browser Forcefully!!! xxxxx')
       this.browser.process().kill('SIGINT');
     }
-    
-
   }
   async getAuth(){
   		const result = { token: "", oauth: "", uid: "", oDeskUserID: "" };
@@ -227,6 +225,40 @@ export default class Browser{
       	const response = await request(this.page, "GET", process.env.MOST_RECENT_URL, headers);
       	return response.data.results;
 	}
+  async searchJobs(){
+    const headers = {
+          "Accept": "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Authorization": "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+        };
+        const response = await request(this.page, "GET", process.env.SEARCH_URL, headers);
+        return response.data.searchResults.jobs;
+
+  }
+  
+  async getUSJobs(){
+    const headers = {
+          "Accept": "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Authorization": "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+        };
+        const response = await request(this.page, "GET", 'https://www.upwork.com/ab/find-work/api/feeds/search?user_location_match=1', headers);
+        return response;
+  }
 	async getJobOpening(id){
 		const headers = {
       		Accept: "application/json, text/plain, */*",
@@ -286,9 +318,6 @@ export default class Browser{
     	};
     	const result = await request(this.page, "POST", "https://www.upwork.com/ab/proposals/api/v2/application/new", headers, data)
       return result;
-
-
-
 	}
   async boost(connects, total, endDate){
     const url = 'https://www.upwork.com/api/graphql/v1';

@@ -57,29 +57,6 @@ async function getJobs(user){
 	}, { sort: { publishedOn: -1 }});
 	return jobs;
 }
-async function apply(agent, job){
-	console.log(`===== Let's apply ========`);
-	
-	await agent.navigate(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`)
-    await agent.getAuth();
-	// const coverLetter = await gpt.prompt(getPrompt({description: job.description}));
-	const coverLetter = 'Hello!'
-	console.log(coverLetter)
-	const result = await agent.applyJob(job.uid, { 
-		link: job.link,
-		coverLetter, 
-		questions: job.questions.map(el=>({...el, answer: gpt.getAnswer(el.question)})),
-		amount: job.isFixed ? job.budget: (process.env.HOURLY_RATE || 30),
-		isFixed: job.isFixed,
-		estimatedDuration: !job.isFixed ? null : job.engagementDuration
-	})
-	if(result!==null){
-		console.log('============ Successfully Applied =========')
-		// await database.
-	}
-
-	
-}
 
 async function boost(agent, total){
 	await agent.navigate('https://www.upwork.com/nx/boost-profile');
@@ -96,7 +73,11 @@ async function boost(agent, total){
 // }
 async function main(){
 	console.log('===========================================');
-	const [accounts, jobs] = await Promise.all([getAccounts(), getJobs(user)]);	
+	let lastTime = moment();
+	const [accounts, jobs] = await Promise.all([getAccounts(), getJobs(user)]);
+	console.log(`Fetched data from DB ${moment().diff(lastTime)}ms`)
+	lastTime = moment();
+
 	if(accounts.length===0){
 		console.log('======== NO ACCOUNT =========');
 		await wait(15 * 1000);
@@ -106,6 +87,7 @@ async function main(){
 		await wait(1000);
 	}
 	else {
+		
 		const account = accounts[0];
 		const job = jobs[0];
 		console.log(`> ${account.email}`)
@@ -118,12 +100,19 @@ async function main(){
 			 (async ()=> {
 						await upwork.start(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`);
 						await upwork.getAuth();
-						// await upwork.navigate(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`)
-						// await upwork.getAuth();
 					})(),
-					gpt.prompt(getPrompt(job.description))
+					(async()=>{
+						const startTime = moment();
+					const text = await	gpt.prompt(getPrompt(job.description))
+					console.log(`GPT in ${moment().diff(startTime)}ms`)
+					return text;
+					})()
 					])
-		await upwork.getAuth();
+
+		console.log(`=======================
+			${coverLetter}
+			===================`)
+
 		const result = await upwork.applyJob(job.uid, {
 			connects: (mode === 'speed') ? 50: 30,
 			link: job.link,
@@ -133,8 +122,9 @@ async function main(){
 			isFixed: job.isFixed,
 			estimatedDuration: !job.isFixed ? null : job.engagementDuration
 		})
+		console.log(`Application ${moment().diff(lastTime)}ms`)
 	if(result.status==='success'){
-		console.log(chalk.green('============ Successfully Applied ========='))
+		console.log(chalk.green(`Successfully Applied in ${moment().diff(moment(job.publishedOn))}`))
 		if(mode==='boost'){
 			await boost(upwork, 20);
 		}
@@ -185,7 +175,7 @@ async function main(){
 		}
 		 else{
 			console.log(result.data);
-			await wait(10* 1000);	
+			await wait(1* 1000);	
 		}
 		await upwork.close();
 	}
