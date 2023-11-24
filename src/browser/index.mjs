@@ -5,15 +5,12 @@ import path from "path";
 import puppeteer from "puppeteer-extra";
 import StealthPlugin from "puppeteer-extra-plugin-stealth";
 import { click } from "puppeteer-utilz";
+import { input } from './function.mjs'
 import { wait } from './../utils/time.mjs'
 const stealth = StealthPlugin();
 puppeteer.use(stealth);
 stealth.enabledEvasions.delete("iframe.contentWindow");
 
-async function input(page, selector, text, delay = 0) {
-  	await page.waitForSelector(selector);
-   	await page.type(selector, text, { delay });
-}
 async function request(page, method, url, headers, data) {
   const config = {method, headers, credentials: 'include'};
   if(method==='POST')config.body = JSON.stringify(data || {});
@@ -79,13 +76,11 @@ async function graphql(page, url, headers, data){
 }
 export default class Browser{
 	AUTH_URL = 'https://www.upwork.com/ab/account-security/login?redir=%2Fnx%2Ffind-work%2Fmost-recent'
-	constructor(user, password, headless=false){
-		this.user = user;
-		this.password = password;
+	constructor(headless=false){
     this.headless = headless;
     
 	}
-	async start(startUrl = this.AUTH_URL){
+	async login({user, password}, startUrl = this.AUTH_URL){
 		  const options = {
         defaultViewport: null,
         args: [
@@ -119,13 +114,13 @@ export default class Browser{
   		await this.page.goto(startUrl, { waitUntil: 'networkidle0' });
   		console.log('========= Rendered Page ==========')
   		// TIMER
-  		await input(this.page, '#login_username', this.user);
+  		await input(this.page, '#login_username', user);
   		await click({
   			component: this.page,
   			selector: '#login_password_continue'
   		});
   		await wait(1500);
-  		await input(this.page, '#login_password', this.password);
+  		await input(this.page, '#login_password', password);
   		await Promise.all([this.page.waitForNavigation(),
   			click({
   				component: this.page,
@@ -133,6 +128,85 @@ export default class Browser{
   			})])
   		console.log('========= Got In ==========')
   		}
+  async signUp({user, password}, { firstName, secondName }, inbox){
+    const options = {
+        defaultViewport: null,
+        args: [
+         "--start-maximized"
+         ],
+        headless: this.headless? 'new': false,
+        devtools: false
+      };
+      if(process.env.HEADLESS==='ON') options.headless = 'new'
+      if (process.platform == "linux") options.args.push("--no-sandbox");
+      this.browser = await puppeteer.launch(options);
+      this.browser.on("disconnected", async () => {
+        console.log("BROWSER CRASH");
+        if (this.browser && this.browser.process() != null) this.browser.process().kill("SIGINT");
+      });
+      this.page = await this.browser.newPage();
+      await this.page.setRequestInterception(true);
+      this.page.on('request', (request) => {
+        // Use the resourceType method to determine the type of the request
+        if (request.resourceType() === 'image' || request.resourceType() === 'stylesheet') {
+          // Abort requests for images or stylesheets
+          request.abort();
+        } else {
+          // Continue with all other requests
+          request.continue();
+      }
+    });
+      await this.page.setDefaultNavigationTimeout(100000);
+      await this.page.goto('https://www.upwork.com/nx/signup/?dest=home');
+      console.log('========= Rendered Page ==========')
+      await click({
+        component: this.page,
+        selector: 'input[name="radio-group-2"]',
+      }),
+      await click({
+      component: this.page,
+      selector: 'button[data-qa="btn-apply"]',
+    });
+
+    await input(this.page, "#first-name-input", firstName);
+    await input(this.page, "#last-name-input", secondName);
+    await input(this.page, "#redesigned-input-email", user);
+    await input(this.page, "#password-input", password);
+
+    let value = false;
+    let trying = 0;
+
+    while (!value) {
+      if (trying == 5) return false;
+      trying = trying + 1;
+      await click({
+        component: this.page,
+        selector: "#checkbox-terms",
+      });
+
+      value = await this.page.$eval("#checkbox-terms", (el) => {
+        return el.value;
+      });
+
+      console.log(value);
+    }
+
+    await Promise.all([
+      this.page.waitForNavigation({ timeout: 60000 }),
+      click({
+        component: this.page,
+        selector: "#button-submit-form",
+      }),
+    ]);
+
+    let href;
+
+    console.log("[Info] Verifying ...");
+    
+    const url = await inbox.verify();
+    await this.page.goto(url, { timeout: 45000 });
+    await wait(5000);
+  }
   async close(){
     await Promise.race([
       this.browser.close(),

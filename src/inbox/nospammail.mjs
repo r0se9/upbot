@@ -1,6 +1,5 @@
 import cheerio from "cheerio";
-import { parseHtml, retry } from "../utils.js";
-import { generateText, getRandomElement } from "../utils.js";
+import { parseHtml, retry, generateText, getRandomElement } from "../utils/lib.mjs";
 import axios from "axios";
 
 export default class NoSpamMail {
@@ -9,7 +8,7 @@ export default class NoSpamMail {
   constructor(email) {
     this.email = email;
   }
-  static async create() {
+  static create() {
     return generateText("mail.", 20) + "@" + getRandomElement(this.domains);
   }
   async getInbox() {
