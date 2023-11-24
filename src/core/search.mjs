@@ -2,10 +2,23 @@ import dotenv from 'dotenv'
 import Browser from '../browser/index.mjs'
 import Database from '../db/mongodb.mjs'
 import chalk from 'chalk';
+import yargs from 'yargs/yargs';
+import _ from 'lodash';
+import { hideBin } from 'yargs/helpers';
 import { decorate } from '../utils/decorator.mjs'
 dotenv.config()
 decorate();
-const upwork = new Browser('w4ecc9ffd1d0c8172bb70dd09@claudiaebacher.com', 'P@ssw0rd123123', true);
+const argv = yargs(hideBin(process.argv))
+.option('debug', {
+    alias: 'd',
+    description: 'Run this code in debug mode',
+    type: 'boolean',
+    default: false
+  })
+  .help()
+  .alias('help', 'h')
+  .argv;
+const upwork = new Browser(process.env.SEARCH_MAIL, process.env.PASSWORD, !argv.debug);
 const database = new Database(process.env.MONBO_URI)
 await database.connect();
 await upwork.start();
@@ -56,7 +69,13 @@ async function resolveJob(job){
 }
 async function scrap(){
 	// get jobs
-	const result = await upwork.getJobs();
+	
+	
+	const results = await Promise.all([upwork.getJobs(), upwork.searchJobs()]);
+	const result = _.map(results[0], (item)=>{
+		return _.merge({}, item, _.find(results[1], ['uid', item.uid]))
+	})
+	
 	const jobs = result.map(el=>{
 	const result = {uid: el.uid, category: el.occupations, client: el.client, title: el.title, publishedOn: el.renewedOn ? el.renewedOn : el.publishedOn, link: el.ciphertext };
 	const isFixed = el.amount.amount ? true: false;
