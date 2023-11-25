@@ -18,10 +18,10 @@ const argv = yargs(hideBin(process.argv))
   .help()
   .alias('help', 'h')
   .argv;
-const upwork = new Browser(process.env.SEARCH_MAIL, process.env.PASSWORD, !argv.debug);
+const upwork = new Browser( !argv.debug);
 const database = new Database(process.env.MONBO_URI)
 await database.connect();
-await upwork.start();
+await upwork.login({user: process.env.SEARCH_MAIL, password: process.env.PASSWORD});
 const authInfo = await upwork.getAuth();
 
 
