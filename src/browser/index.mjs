@@ -128,11 +128,12 @@ export default class Browser{
   			})])
   		console.log('========= Got In ==========')
   		}
-  async signUp({user, password}, { firstName, secondName }, inbox){
+  async signUp({user, password}, { firstName, secondName }, inbox, args){
     const options = {
         defaultViewport: null,
         args: [
-         "--start-maximized"
+         "--start-maximized",
+         ...args
          ],
         headless: this.headless? 'new': false,
         devtools: false
@@ -144,7 +145,16 @@ export default class Browser{
         console.log("BROWSER CRASH");
         if (this.browser && this.browser.process() != null) this.browser.process().kill("SIGINT");
       });
+     
+      // const pages = await this.browser.pages(); 
+      // this.page = pages[0];
       this.page = await this.browser.newPage();
+
+    await this.page.goto("chrome://settings/");
+      await this.page.evaluate(() => {
+          chrome.settingsPrivate.setDefaultZoom(0.5);
+      });
+      
       await this.page.setRequestInterception(true);
       this.page.on('request', (request) => {
         // Use the resourceType method to determine the type of the request
@@ -225,6 +235,7 @@ export default class Browser{
     		if (cookie["name"] === "oauth2_global_js_token") result["oauth"] = cookie["value"];
     		if (cookie["name"] === "user_uid") result["uid"] = cookie["value"];
     		if (cookie["name"] === "console_user") result["oDeskUserID"] = cookie["value"];
+        if (cookie["name"] === "master_access_token") result["master"] = cookie["value"];
         if (cookie['path'] === '/nx/find-work/') result['fwToken'] = cookie['value'];
         if (cookie['path'] === '/nx/') result['nxToken'] = cookie['value'];
   		}

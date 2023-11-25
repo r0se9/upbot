@@ -1,3 +1,4 @@
+import fs from 'fs'
 export async function ForceCaptcha(page) {
   while (true) {
     try {
@@ -24,8 +25,42 @@ export async function ForceCaptcha(page) {
     }
   }
 }
-
+export function readFileAsync(a) {
+  return new Promise((e, t) => {
+    try {
+      e(fs.readFileSync(a, "utf8"));
+    } catch (e) {
+      t(e);
+    }
+  });
+}
 export async function input(page, selector, key, delay = 0) {
   await page.waitForSelector(selector);
   await page.type(selector, key, { delay: delay });
+}
+
+export async function evaluate(e, t, a, n) {
+  return n
+    ? await e.evaluate(
+        async (e, t, a) => {
+          e = await fetch(e, {
+            method: "POST",
+            headers: t,
+            credentials: "include",
+            body: JSON.stringify(a),
+          });
+          return e.ok ? await e.json() : null;
+        },
+        t,
+        a,
+        n
+      )
+    : await e.evaluate(
+        async (e, t) => {
+          e = await fetch(e, { headers: t, credentials: "include" });
+          return e.ok ? await e.json() : null;
+        },
+        t,
+        a
+      );
 }
