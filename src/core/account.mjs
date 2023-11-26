@@ -19,7 +19,7 @@ import { wait } from "../utils/time.mjs";
 import { getRandomElement } from '../utils/lib.mjs';
 decorate();
 const PROFILE_PATH = "./static/profiles";
-const AVAILABLE_INBOXes = ["nospammail", "genmail", "tenmail", "fakemail", "dispmail"];
+const AVAILABLE_INBOXes = ["nospammail", "genmail", "tenmail", "fakemail", "dispmail", "random"];
 const GQL_URL = "https://www.upwork.com/api/graphql/v1";
 dotenv.config();
 const argv = yargs(hideBin(process.argv))
