@@ -100,6 +100,10 @@ export default class Browser{
   		// const pages = await this.browser.pages();
   		// this.page = pages[0];
   		this.page = await this.browser.newPage();
+      await this.page.goto("chrome://settings/");
+      await this.page.evaluate(() => {
+          chrome.settingsPrivate.setDefaultZoom(0.5);
+      });
       await this.page.setRequestInterception(true);
       this.page.on('request', (request) => {
         // Use the resourceType method to determine the type of the request
