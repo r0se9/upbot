@@ -81,6 +81,7 @@ export default class Browser{
     
 	}
 	async login({user, password}, startUrl = this.AUTH_URL){
+    console.log('Login...')
 		  const options = {
         defaultViewport: null,
         args: [
