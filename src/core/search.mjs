@@ -99,8 +99,13 @@ async function scrap(){
 	if(newJobs.length===0) return;
 	const jobList = [];
 	for(let index in newJobs){
-		const job = await resolveJob(newJobs[index]);
-		jobList.push(job);
+		try{
+			const job = await resolveJob(newJobs[index]);
+			jobList.push(job);	
+		}catch(e){
+			console.log(chalk.red(`Error resolve Job: ${job.uid}`))
+		}
+		
 	}
 	await database.createMany('jobs', jobList);
 	// const data = await upwork.getConnects();
