@@ -48,11 +48,15 @@ async function getAccounts() {
 	return accounts;
 }
 async function getJobs(user){
-	const timeLimit = moment().subtract(process.env.LIMIT, 'hours').tz('UTC').format();	
+	const timeLimit = moment().subtract(process.env.LIMIT, 'hours').tz('UTC').toDate();	
+	console.log(timeLimit)
 	const jobs = await database.get('jobs', {
 		$and:[
 			{
-				'client.location.country': { $nin: ["Pakistan", "India","South Korea"]}
+				'client.location.country': { $nin: ["Pakistan", "India","South Korea"]},
+				users: { $ne: user },
+				isPrivate: { $ne: true },
+				publishedOn: { $gte: timeLimit }
 			},
 			{
 				$or: [
@@ -64,19 +68,14 @@ async function getJobs(user){
 					},
 					{
 						isFixed: false,
-						'budget.type' : 'MANUUAL',
-						'budget.min': { $gte: process.env.HOURLY_LIMIT|| 25 }
+						'budget.type' : {$ne:'NOT_PROVIDED'},
+						'budget.max': { $gte: process.env.HOURLY_LIMIT|| 25 }
 					},
 					{
 						isFixed: false,
 						'budget.type' : 'NOT_PROVIDED',
 					}
 					]
-			},
-			{
-				users: { $ne: user },
-				isPrivate: { $ne: true },
-				publishedOn: { $gte: timeLimit }
 			}
 			]
 	}, { sort: { publishedOn: -1 }});
