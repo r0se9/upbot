@@ -10,11 +10,16 @@ import { click } from "puppeteer-utilz";
 import { hideBin } from "yargs/helpers";
 import { decorate } from "../utils/decorator.mjs";
 import NoSpamMail from "../inbox/nospammail.mjs";
+import GenMail from '../inbox/genmail.mjs';
+import DisposableMail from '../inbox/diposablemail.mjs';
+import FakeMail from '../inbox/fakemail.mjs';
+import TenMail from '../inbox/tenmail.mjs';
 import { evaluate, readFileAsync } from "../browser/function.mjs";
 import { wait } from "../utils/time.mjs";
+import { getRandomElement } from '../utils/lib.mjs';
 decorate();
 const PROFILE_PATH = "./static/profiles";
-const AVAILABLE_INBOXes = ["nospammail"];
+const AVAILABLE_INBOXes = ["nospammail", "genmail", "tenmail", "fakemail", "dispmail", "random"];
 const GQL_URL = "https://www.upwork.com/api/graphql/v1";
 dotenv.config();
 const argv = yargs(hideBin(process.argv))
@@ -211,8 +216,26 @@ async function getLocation(page, city, countryCode, AUTH) {
 async function createAccount(profile, inboxType, profileName, botName, db) {
   let inbox;
   if (inboxType === "nospammail") {
-    inbox = new NoSpamMail(NoSpamMail.create());
+    inbox = new NoSpamMail(await NoSpamMail.create());
+  } else if(inboxType === "genmail"){
+    inbox = new GenMail(await GenMail.create());
+  } else if(inboxType === 'tenmail'){
+    inbox = new TenMail(await TenMail.create());
+  } else if(inboxType === 'fakemail'){
+    inbox = new FakeMail(await FakeMail.create());
+  } else if(inboxType === 'dispmail'){
+    inbox = new DisposableMail(await DisposableMail.create());
+  } else if(inboxType === 'random'){
+    const MAIL = getRandomElement([
+      NoSpamMail,
+      GenMail,
+      TenMail,
+      FakeMail,
+      DisposableMail
+      ]);
+    inbox = new MAIL(await MAIL.create());
   }
+  console.log(`===> ${inbox.email}`)
   const pathToExtension = path.resolve("./static/extensions/cookies");
   const upwork = new Browser(!argv.debug);
   try{

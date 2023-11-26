@@ -44,16 +44,36 @@ await database.connect();
 const gpt = new GPT(process.env.OPENAI_KEY, process.env.GPT_MODEL)
 
 async function getAccounts() {
-	const accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: user });
+	const accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: user, isPremium: true });
 	return accounts;
 }
 async function getJobs(user){
 	const timeLimit = moment().subtract(process.env.LIMIT, 'hours').tz('UTC').format();	
-	const jobs = await database.get('jobs', { 
-		idvRequiredByOpening: false, 
-		users: { $ne: user }, 
-		isPrivate: { $ne: true },
-		publishedOn: { $gte: timeLimit },
+	const jobs = await database.get('jobs', {
+		'$and':[
+			{
+				'client.contact.country': { $nin: ["Pakistan", "India","South Korea"]}
+			},
+			{
+				'$or': [
+					{
+						isFixed: true, 
+						budget: {
+							'$gte': process.env.FIXED_LIMIT || 500
+						}
+					},
+					{
+						isFixed: false, 
+						'budget.min': { '$gte': process.env.HOURLY_LIMIT|| 25 }
+					}
+					]
+			},
+			{
+				users: { $ne: user },
+				isPrivate: { $ne: true },
+				publishedOn: { $gte: timeLimit }
+			}
+			]
 	}, { sort: { publishedOn: -1 }});
 	return jobs;
 }
@@ -95,10 +115,10 @@ async function main(){
 			moment().diff(job.publishedOn) / 1000
 		+ ' sec ago');
 
-		const upwork = new Browser(account.email, process.env.PASSWORD, !DEBUG);
+		const upwork = new Browser(!DEBUG);
 		const [_, coverLetter] = await Promise.all([
 			 (async ()=> {
-						await upwork.start(`https://www.upwork.com/ab/proposals/job/${job.link}/apply`);
+						await upwork.login({ user: account.email, password: process.env.PASSWORD}, `https://www.upwork.com/ab/proposals/job/${job.link}/apply`);
 						await upwork.getAuth();
 					})(),
 					(async()=>{
