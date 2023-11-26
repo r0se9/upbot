@@ -50,21 +50,26 @@ async function getAccounts() {
 async function getJobs(user){
 	const timeLimit = moment().subtract(process.env.LIMIT, 'hours').tz('UTC').format();	
 	const jobs = await database.get('jobs', {
-		'$and':[
+		$and:[
 			{
-				'client.contact.country': { $nin: ["Pakistan", "India","South Korea"]}
+				'client.location.country': { $nin: ["Pakistan", "India","South Korea"]}
 			},
 			{
-				'$or': [
+				$or: [
 					{
 						isFixed: true, 
 						budget: {
-							'$gte': process.env.FIXED_LIMIT || 500
+							$gte: process.env.FIXED_LIMIT || 500
 						}
 					},
 					{
-						isFixed: false, 
-						'budget.min': { '$gte': process.env.HOURLY_LIMIT|| 25 }
+						isFixed: false,
+						'budget.type' : 'MANUUAL',
+						'budget.min': { $gte: process.env.HOURLY_LIMIT|| 25 }
+					},
+					{
+						isFixed: false,
+						'budget.type' : 'NOT_PROVIDED',
 					}
 					]
 			},
