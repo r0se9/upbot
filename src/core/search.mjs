@@ -3,6 +3,7 @@ import Browser from '../browser/index.mjs'
 import Database from '../db/mongodb.mjs'
 import chalk from 'chalk';
 import yargs from 'yargs/yargs';
+import moment from 'moment-timezone';
 import _ from 'lodash';
 import { hideBin } from 'yargs/helpers';
 import { decorate } from '../utils/decorator.mjs'
@@ -77,7 +78,8 @@ async function scrap(){
 	})
 	
 	const jobs = result.map(el=>{
-	const result = {uid: el.uid, category: el.occupations, client: el.client, title: el.title, publishedOn: el.renewedOn ? el.renewedOn : el.publishedOn, link: el.ciphertext };
+		const publishedOn = moment(el.renewedOn ? el.renewedOn : el.publishedOn).tz('UTC');
+	const result = {uid: el.uid, category: el.occupations, client: el.client, title: el.title, publishedOn: publishedOn.toDate(), link: el.ciphertext };
 	const isFixed = el.amount.amount ? true: false;
 	result.isFixed = isFixed;
 	if(isFixed){
