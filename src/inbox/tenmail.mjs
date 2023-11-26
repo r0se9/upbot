@@ -7,7 +7,7 @@ import {
   getRandomElement,
   retry,
   wait,
-} from "../utils.js";
+} from "../utils/lib.mjs";
 
 export default class TenMail {
   constructor(email) {
@@ -93,7 +93,7 @@ export default class TenMail {
     while (retry < 20) {
       const data = await this.getInbox();
       inboxes = data.filter((el) => {
-        if (el["predmet"].includes("Verify")) {
+        if (el["subject"].includes("Verify")) {
           return true;
         }
         return false;
@@ -105,7 +105,7 @@ export default class TenMail {
     if (retry === 20) throw new Error("Maximum Retry Exceed");
 
     const last = inboxes[0];
-    const message = await this.getMessageContent(last["id"]);
+    const message = await this.getMessageContent(last["link"]);
     const $ = cheerio.load(message);
     return $('a:contains("Verify Email")').attr("href");
   }

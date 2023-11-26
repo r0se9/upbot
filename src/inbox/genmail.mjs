@@ -7,7 +7,7 @@ import {
   getRandomElement,
   retry,
   wait,
-} from "../utils.js";
+} from "../utils/lib.mjs";
 export default class GeneratorMail {
   baseUrl = "https://generator.email";
 
