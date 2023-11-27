@@ -207,8 +207,9 @@ async function main(){
 		do {
 			const jobs = await getJobs(agent);
 			filteredJobs = filterJobs(jobs, lastAppliedJobs);
-			if(filteredJobs.length){
+			if(filteredJobs.length===0){
 				await wait(5 * 1000);
+				console.log('Waiting Job.....')
 			}
 		} while(filteredJobs.length === 0);
 
