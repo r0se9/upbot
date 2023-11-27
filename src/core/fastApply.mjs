@@ -54,9 +54,11 @@ async function boost(agent, total){
 	}
 }
 async function createAgent(user){
+	const first = moment();
 	const upwork = new Browser(!DEBUG);
 	await upwork.login({ user, password: process.env.PASSWORD});
 	await upwork.getAuth();
+	console.log(`New Agent is created in ${moment().diff(first) /1000}s`)
 	return upwork;
 }
 async function getLastAppliedJobs(){
@@ -104,17 +106,24 @@ function filterJobs(jobs, exclude){
 	})
 }
 async function apply(agent, job){
+	const start = moment();
 	const [coverLetter, {engagementDuration, questions }] = await Promise.all([
-		gpt.prompt(getPrompt(job.description)),
 		(async ()=>{
-			await agent.navigate(job.link);
-			await wait(1000);
+					const start = moment();
+					const result = await gpt.prompt(getPrompt(job.description));
+					console.log(chalk.green(`GPT is created in ${moment().diff(start)/1000}s`));
+					console.log('======= GPT ====');
+					console.log(result);
+					console.log('================');
+					return result;
+				})(),
+		(async ()=>{
+			await agent.navigate(job.link, { waitUntil: "networkidle0" });
 			await agent.getAuth();
 			const result = await agent.getJobOpening(job.uid);
 			return {engagementDuration: result.opening.job.engagementDuration, questions: result.questions.questions};
 		})()
 		]);
-	console.log(coverLetter);
 	const result = await agent.applyJob(job.uid, {
 			connects: (MODE === 'speed') ? 50: 30,
 			link: job.link,
@@ -124,6 +133,7 @@ async function apply(agent, job){
 			isFixed: job.isFixed,
 			estimatedDuration: !job.isFixed ? null : engagementDuration
 		});
+	console.log(chalk.green(`Application is finshed in ${moment().diff(start) / 1000 }s`))
 	return result;
 }
 async function followUp(agent, email, job, result){
