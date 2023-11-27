@@ -140,7 +140,7 @@ async function followUp(agent, email, job, result){
 	if(result.status==='success'){
 		const now = moment().tz('UTC');
 		const postedAt = moment(job.postedAt).tz('UTC');
-		console.log(chalk.green(`Successfully Applied in ${now.diff(postedAt)} ms`))
+		console.log(chalk.green(`Successfully Applied in ${now.diff(postedAt) / 1000 } s`))
 		if(MODE==='boost'){
 			await boost(agent, 20);
 		}
