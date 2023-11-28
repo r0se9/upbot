@@ -27,25 +27,18 @@ const authInfo = await upwork.getAuth();
 
 
 async function resolveJob(job){
-	const results = await Promise.all([
-		(async ()=>{
-				const result = await upwork.getJobOpening(job.uid)
-
+				const result = await upwork.getJobOpening(job.uid);
+				const postedAt = job.publishedOn || job.renewedOn;
 				const re = {
 					uid: job.uid,
 					isFixed: job.isFixed,
 					budget: job.budget,
 					link: job.link,
-					publishedOn: job.publishedOn,
-					category: job.category,
-					isPrivate: result.opening.job.info.isPtcPrivate,
-					isPremium: result.opening.job.info.premium,
+					publishedOn: moment(postedAt).tz('UTC').toDate(),
 					questions: result.questions.questions,
 					title: result.opening.title,
 					description: result.opening.description,
 					qualifications: result.qualifications,
-					engagementDuration: result.opening.job.engagementDuration,
-					isOngoing: result.opening.job.segmentationData,
 					client: {
 						...job.client,
 						contact: result.organization.contact,
@@ -53,20 +46,6 @@ async function resolveJob(job){
 					},
 				}
 				return re;
-				
-			})(),
-	(async ()=>{
-			const res = await upwork.getJobDetail({link: job.link});
-
-			return ({
-        engagementDurationsList: res.data.context.engagementDurationsList || [],
-        idVerificationRequired: res.data.context.idVerificationNeeded || false,
-        idvRequiredByOpening: res.data.context.idvRequiredByOpening || false,
-        phoneVerificationNeeded: res.data.context.phoneVerificationNeeded || false,
-      });
-		})()]);
-	return ({...results[0], ...results[1]})
-
 }
 async function scrap(){
 	// get jobs
@@ -79,7 +58,14 @@ async function scrap(){
 	
 	const jobs = result.map(el=>{
 		const publishedOn = moment(el.renewedOn ? el.renewedOn : el.publishedOn).tz('UTC');
-	const result = {uid: el.uid, category: el.occupations, client: el.client, title: el.title, publishedOn: publishedOn.toDate(), link: el.ciphertext };
+	const result = {
+		uid: el.uid, 
+		category: el.occupations, 
+		client: el.client, 
+		title: el.title, 
+		publishedOn: publishedOn.toDate(), 
+		link: `https://www.upwork.com/ab/proposals/job/${el.ciphertext}/apply/` 
+	};
 	const isFixed = el.amount.amount ? true: false;
 	result.isFixed = isFixed;
 	if(isFixed){
@@ -94,7 +80,7 @@ async function scrap(){
 	// get uids
 	const uids = jobs.map(el=>el.uid);
 	// check unsaved uids
-	const saved = await database.get('jobs', {uid: {'$in':uids}});
+	const saved = await database.get('newJobs', {uid: {'$in':uids}});
 	const savedUids = saved.map(el=>el.uid);
 	const newJobs  = jobs.filter(el=>!savedUids.includes(el.uid));
 	console.log(`================= There are ${newJobs.length} new Jobs found =================`)
@@ -109,7 +95,7 @@ async function scrap(){
 		}
 		
 	}
-	await database.createMany('jobs', jobList);
+	await database.createMany('newJobs', jobList);
 	// const data = await upwork.getConnects();
 	// console.log(data)
 	

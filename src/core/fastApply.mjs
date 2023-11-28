@@ -41,10 +41,6 @@ const DEBUG = (argv.debug && argv.debug === true) ? true : false;
 const database = new Database(process.env.MONBO_URI)
 await database.connect();
 const gpt = new GPT(process.env.OPENAI_KEY, process.env.GPT_MODEL)
-async function getAccounts() {
-	const accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: user, isPremium: true });
-	return accounts;
-};
 async function boost(agent, total){
 	await agent.navigate('https://www.upwork.com/nx/boost-profile');
 	await agent.getAuth();
@@ -67,8 +63,8 @@ async function getLastAppliedJobs(){
 }
 async function getJobs(agent){
 	const results = await Promise.all([agent.getJobs(), agent.searchJobs()]);
-	const result = _.map(results[0], (item)=>{
-		return _.merge({}, item, _.find(results[1], ['uid', item.uid]))
+	const result = _.map(results[1], (item)=>{
+		return _.merge({}, item, _.find(results[0], ['uid', item.uid]))
 	})
 	
 	const jobs = result.map(el=>{
@@ -141,6 +137,8 @@ async function followUp(agent, email, job, result){
 		const now = moment().tz('UTC');
 		const postedAt = moment(job.postedAt).tz('UTC');
 		console.log(chalk.green(`Successfully Applied in ${now.diff(postedAt) / 1000 } s`))
+
+		console.log(chalk.green(`Job: ${job.title}`))
 		if(MODE==='boost'){
 			await boost(agent, 20);
 		}
@@ -195,7 +193,7 @@ async function followUp(agent, email, job, result){
 
 async function main(){
 	while(true){
-		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER, isPremium: true });
+		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER });
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
 			break;
