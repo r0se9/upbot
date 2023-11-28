@@ -83,7 +83,7 @@ async function scrap(){
 	const saved = await database.get('newJobs', {uid: {'$in':uids}});
 	const savedUids = saved.map(el=>el.uid);
 	const newJobs  = jobs.filter(el=>!savedUids.includes(el.uid));
-	console.log(`================= There are ${newJobs.length} new Jobs found =================`)
+	console.log(chalk.green(`${newJobs.length} New Jobs`))
 	if(newJobs.length===0) return;
 	const jobList = [];
 	for(let index in newJobs){
@@ -102,7 +102,7 @@ async function scrap(){
 }
 async function main(){
 	await scrap();
-	setTimeout(main, 10000);
+	setTimeout(main, 1000 * process.env.SEARCH_TIMEOUT);
 }
 await main();
 process.on('exit', ()=>{
