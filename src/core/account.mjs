@@ -52,8 +52,8 @@ const argv = yargs(hideBin(process.argv))
   .help()
   .alias("help", "h").argv;
 
-function generatePhoneNumber() {
-  return (Math["floor"](Math["random"]() + 90000000) + 1000000).toString();
+function generatePhoneNumber(base) {
+  return base.replace(/\*/g, () => Math.floor(Math.random() * 10));
 }
 async function getAuthData(page) {
   const data = { token: "", oauth: "" };
@@ -347,7 +347,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       records: profile["workXP"].map((el) => ({
         companyName: el["company"],
         jobTitle: el["role"],
-        description: null,
+        description: el['description'].join('\n'),
         city: null,
         country: "HKG",
         startDate: el["start"],
@@ -484,7 +484,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
         zip: profile["zipcode"],
         country: profile["country"],
       },
-      phoneNumber: generatePhoneNumber(),
+      phoneNumber: generatePhoneNumber(profile['phone']),
       phoneCode: profile["countryCode"],
     }
   );
