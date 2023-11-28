@@ -78,8 +78,14 @@ export default class Browser{
 	AUTH_URL = 'https://www.upwork.com/ab/account-security/login?redir=%2Fnx%2Ffind-work%2Fmost-recent'
 	constructor(headless=false){
     this.headless = headless;
-    
 	}
+  async connectRemote(port){
+    const browserURL = `http://127.0.0.1:${port}`;
+    this.browser = await puppeteer.connect({browserURL})
+      const pages = await this.browser.pages();
+      this.page = pages[0];
+
+  }
 	async login({user, password}, startUrl = this.AUTH_URL){
     console.log('Login...')
 		  const options = {
@@ -90,7 +96,7 @@ export default class Browser{
         headless: this.headless? 'new': false,
         devtools: false
       };
-      if(process.env.HEADLESS==='ON') options.headless = 'new'
+
       if (process.platform == "linux") options.args.push("--no-sandbox");
       this.browser = await puppeteer.launch(options);
       this.browser.on("disconnected", async () => {
@@ -347,7 +353,23 @@ export default class Browser{
           "X-Upwork-Accept-Language": "en-US",
         };
         const response = await request(this.page, "GET", 'https://www.upwork.com/ab/find-work/api/feeds/search?user_location_match=1', headers);
-        return response;
+        return response.data.results;
+  }
+  async searchUSJobs(url){
+    const headers = {
+          "Accept": "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Authorization": "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+        };
+        const response = await request(this.page, "GET", url, headers);
+        return response.data.searchResults.jobs;
   }
 	async getJobOpening(id){
 		const headers = {
