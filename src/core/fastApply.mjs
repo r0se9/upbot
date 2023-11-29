@@ -211,12 +211,13 @@ async function main(){
 		if(isRestricted){
 			console.log(chalk.red('This has been restricted.'))
 			await database.delete('accounts', { email });
+			await agent.close();
 			continue;
 		}
 		let filteredJobs = [];
 		do {
 			const jobs = await getJobs(agent);
-			const saved = await database.get('newJobs', {uid: {'$in':jobs.map(el=>el.uid)}});
+			const saved = await database.get('applied', {uid: {'$in':jobs.map(el=>el.uid)}});
 			filteredJobs = filterJobs(jobs, saved.map(el=>el.uid));
 			if(filteredJobs.length===0){
 				await wait(5 * 1000);
