@@ -190,7 +190,13 @@ async function followUp(agent, email, job, result){
 }
 
 
+async function checkRestrict(agent){
+	const result = await agent.getMe();
+	const restResult = await agent.isRestricted(result.personUid);
+	return restResult.data.data.developerSuspended.suspendedStatus
 
+
+}
 async function main(){
 	while(true){
 		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER });
@@ -200,11 +206,18 @@ async function main(){
 		}
 		const { email } = accounts[0];
 		console.log(chalk.green(`Start with ${email}`));
-		const [agent, lastAppliedJobs ] = await Promise.all([createAgent(email), getLastAppliedJobs()]);
+		const agent = await createAgent(email);
+		const isRestricted = await checkRestrict(agent);
+		if(isRestricted){
+			console.log(chalk.red('This has been restricted.'))
+			await database.delete('accounts', { email });
+			continue;
+		}
 		let filteredJobs = [];
 		do {
 			const jobs = await getJobs(agent);
-			filteredJobs = filterJobs(jobs, lastAppliedJobs);
+			const saved = await database.get('newJobs', {uid: {'$in':jobs.map(el=>el.uid)}});
+			filteredJobs = filterJobs(jobs, saved.map(el=>el.uid));
 			if(filteredJobs.length===0){
 				await wait(5 * 1000);
 				console.log('Waiting Job.....')
