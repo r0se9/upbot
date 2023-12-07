@@ -13,7 +13,7 @@ export function decorate(){
                                                     `)
 }
 
-const frames = ['◐', '◓', '◑', '◒']; // These characters simulate rotation
+const frames = ['█     ', '██    ', '███   ', '████  ', '█████ ', '██████']; // These characters simulate rotation
 
 // Function to update the rotating icon and time
 export function updateProgress(text, i) {

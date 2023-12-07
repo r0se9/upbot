@@ -5,6 +5,7 @@ import Browser from '../browser/index.mjs';
 import { getPrompt } from '../gpt/prompt.config.mjs';
 import _ from 'lodash';
 import { wait } from '../utils/time.mjs';
+import { updateProgress } from '../utils/decorator.mjs';
 
 
 
