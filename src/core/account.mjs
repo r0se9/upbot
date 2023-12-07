@@ -662,14 +662,14 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     console.log(chalk.green("Premium Account is saved in database"));
   } catch (e) {
     console.log(chalk.red("Error: additional configuration"));
-    await db.create("accounts", {
-      email: inbox.email,
-      type: inboxType,
-      botName: botName,
-      status: "active",
-      name: profileName,
-      isPremium: false,
-    });
+    // await db.create("accounts", {
+    //   email: inbox.email,
+    //   type: inboxType,
+    //   botName: botName,
+    //   status: "active",
+    //   name: profileName,
+    //   isPremium: false,
+    // });
     console.log(chalk.green("Account is saved in database"));
   }finally {
     // await page.close();

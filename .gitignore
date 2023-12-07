@@ -3,3 +3,4 @@
 *.config.mjs
 **/test/**
 static/**
+src/bin/bin.*.mjs
