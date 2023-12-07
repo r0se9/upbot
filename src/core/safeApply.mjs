@@ -188,10 +188,12 @@ async function main(gpt, database, USER, MODE, DEBUG){
 		}
 		let filteredJobs = [];
 		let index=0;
+		const startTime = moment();
 		const interval = setInterval(() => {
-  			updateProgress('Searching Job ', index);
+  			updateProgress('Searching Job ', startTime, index);
   			index++;
 		}, 250); // Rotate every 250ms
+		
 
 		do {
 			const jobs = await getJobs(agent);
