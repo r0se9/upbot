@@ -6,13 +6,21 @@ export default class GPT{
 		const config = ({ apiKey });
 		this.openai = new OpenAI(config)
 		this.model = model;
+		this.fnPrompt = e=>e;
+	}
+	setPrompt(fn){
+		this.fnPrompt = fn;
+
+	}
+	setKnowledgeBase(data){
+		this.base = data;
 	}
 	async prompt(prompt_text){
 		try{
 			const text = await this.openai.chat.completions.create({
 				model: this.model,
             	messages: [
-            		{ role: 'user', content: prompt_text }
+            		{ role: 'user', content: this.fnPrompt(prompt_text) }
             		],
             		stream: false,
 				}

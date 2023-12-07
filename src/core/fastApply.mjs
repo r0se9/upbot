@@ -1,46 +1,16 @@
 // Fast Apply
-import dotenv from 'dotenv';
-import yargs from 'yargs/yargs';
-import { hideBin } from 'yargs/helpers';
 import chalk from 'chalk';
 import moment from 'moment-timezone';
-import { decorate } from '../utils/decorator.mjs'
 import Browser from '../browser/index.mjs';
-import Database from '../db/mongodb.mjs';
 import { getPrompt } from '../gpt/prompt.config.mjs';
 import _ from 'lodash';
-import GPT from '../gpt/index.mjs';
 import { wait } from '../utils/time.mjs';
-dotenv.config()
-decorate();
-const argv = yargs(hideBin(process.argv))
-.option('debug', {
-    alias: 'd',
-    description: 'Run this code in debug mode',
-    type: 'boolean',
-    default: false
-  })
-  .option('user', {
-    alias: 'u',
-    description: 'Enter your name',
-    demandOption: true,
-    type: 'string'
-  })
-  .option('mode', {
-    alias: 'm',
-    description: 'Enter the bid mode',
-    choices: ['speed', 'boost'],
-    demandOption: true,
-  })
-  .help()
-  .alias('help', 'h')
-  .argv;
-const USER = argv.user;
-const MODE = argv.mode;
-const DEBUG = (argv.debug && argv.debug === true) ? true : false;
-const database = new Database(process.env.MONBO_URI)
-await database.connect();
-const gpt = new GPT(process.env.OPENAI_KEY, process.env.GPT_MODEL)
+
+
+
+
+
+
 async function boost(agent, total){
 	await agent.navigate('https://www.upwork.com/nx/boost-profile');
 	await agent.getAuth();
@@ -49,7 +19,7 @@ async function boost(agent, total){
 		console.log(chalk.green('>>> Successfully boosted :)'))
 	}
 }
-async function createAgent(user){
+async function createAgent(user, DEBUG){
 	const first = moment();
 	const upwork = new Browser(!DEBUG);
 	await upwork.login({ user, password: process.env.PASSWORD});
@@ -101,7 +71,7 @@ function filterJobs(jobs, exclude){
 		else return false;
 	})
 }
-async function apply(agent, job){
+async function apply(agent, job, gpt, MODE){
 	const start = moment();
 	const [coverLetter, {engagementDuration, questions }] = await Promise.all([
 		(async ()=>{
@@ -132,7 +102,7 @@ async function apply(agent, job){
 	console.log(chalk.green(`Application is finshed in ${moment().diff(start) / 1000 }s`))
 	return result;
 }
-async function followUp(agent, email, job, result){
+async function followUp(database, agent, email, job, result, MODE, USER){
 	if(result.status==='success'){
 		const now = moment().tz('UTC');
 		const postedAt = moment(job.postedAt).tz('UTC');
@@ -197,7 +167,7 @@ async function checkRestrict(agent){
 
 
 }
-async function main(){
+async function main(gpt, database, USER, MODE, DEBUG){
 	while(true){
 		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER });
 		if(accounts.length === 0){
@@ -206,7 +176,7 @@ async function main(){
 		}
 		const { email } = accounts[0];
 		console.log(chalk.green(`Start with ${email}`));
-		const agent = await createAgent(email);
+		const agent = await createAgent(email, DEBUG);
 		const isRestricted = await checkRestrict(agent);
 		if(isRestricted){
 			console.log(chalk.red('This has been restricted.'))
@@ -226,11 +196,10 @@ async function main(){
 		} while(filteredJobs.length === 0);
 
 		const job = filteredJobs[0];
-		const result = await apply(agent, job);
-		await followUp(agent, email, job, result);
+		const result = await apply(agent, job, gpt, MODE);
+		await followUp(database, agent, email, job, result, MODE, USER);
 		await agent.close();
 	}
 	await database.close();
 }
-
-await main();
+export default main;
