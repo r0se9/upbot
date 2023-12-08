@@ -74,6 +74,8 @@ function filterJobs(jobs, exclude){
 	})
 }
 async function apply(agent, job, gpt, MODE){
+
+	console.log('=====' + job.title + '=====')
 	const start = moment();
 	const [coverLetter, {engagementDuration, questions }] = await Promise.all([
 		(async ()=>{
@@ -171,7 +173,7 @@ async function checkRestrict(agent){
 }
 async function main(gpt, database, USER, MODE, DEBUG){
 	while(true){
-		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER });
+		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER }, { sort: {createdAt: 1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
 			break;
