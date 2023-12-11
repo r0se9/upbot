@@ -216,7 +216,7 @@ async function getLocation(page, city, countryCode, AUTH) {
 async function createAccount(profile, inboxType, profileName, botName, db) {
     const locations = await db.get('locations', { country: profile['country']});
     const location = getRandomElement(locations);
-    console.log(location);
+    // console.log(location);
   let inbox;
   if (inboxType === "nospammail") {
     inbox = new NoSpamMail(await NoSpamMail.create());
