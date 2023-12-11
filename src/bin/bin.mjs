@@ -15,6 +15,12 @@ const argv = yargs(hideBin(process.argv))
     type: 'boolean',
     default: false
   })
+  .option('gpt', {
+    alias: 'g',
+    description: 'Use Gpt ',
+    type: 'boolean',
+    default: false
+  })
   .option('mode', {
     alias: 'm',
     description: 'Enter the bid mode',
@@ -28,7 +34,7 @@ const argv = yargs(hideBin(process.argv))
 const USER = 'ken'; // TODO
 const MODE = argv.mode;
 const DEBUG = (argv.debug && argv.debug === true) ? true : false;
-
+const USEGPT = (argv.gpt && argv.gpt === true) ? true : false;
 
 const gpt = new GPT(process.env.OPENAI_KEY, process.env.GPT_MODEL);
 // TO-DO
@@ -45,4 +51,4 @@ gpt.setKnowledgeBase([
 	]);
 const database = new Database(process.env.MONBO_URI);
 await database.connect();
-await main(gpt, database, USER, MODE, DEBUG);
+await main(gpt, database, USER, MODE, DEBUG, USEGPT);
