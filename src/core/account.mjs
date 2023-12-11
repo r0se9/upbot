@@ -16,7 +16,7 @@ import FakeMail from '../inbox/fakemail.mjs';
 import TenMail from '../inbox/tenmail.mjs';
 import { evaluate, readFileAsync } from "../browser/function.mjs";
 import { wait } from "../utils/time.mjs";
-import { getRandomElement } from '../utils/lib.mjs';
+import { getRandomElement, imageToBase64 } from '../utils/lib.mjs';
 decorate();
 const PROFILE_PATH = "./static/profiles";
 const AVAILABLE_INBOXes = ["nospammail", "genmail", "tenmail", "fakemail", "dispmail", "random"];
@@ -259,16 +259,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
   });
   const AUTH = await getAuthData(upwork.page);
 
-  let avatarUploaded = false;
-  upwork.page.on("requestfinished", (data) => {
-    if (
-      data.url() ===
-      "https://www.upwork.com/ab/create-profile/api/v2/portrait-upload"
-    ) {
-      avatarUploaded = true;
-      console.log("(:+) Avatar is uploaded successfully");
-    }
-  });
+  
 
   const gqlHeaders = generateGQLHeader(AUTH["oauth"]);
   const apiHeaders = generateAPIHeader(AUTH["oauth"], AUTH["token"]);
@@ -495,28 +486,95 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
 
   console.log(chalk.green("15. Save Address and Phone"));
 
-  // Upload profile Image
 
-  await upwork.navigate("https://www.upwork.com/nx/create-profile/location");
-  await click({
-    component: upwork.page,
-    selector: 'button[data-qa="open-loader"]',
-  });
-  const imagePath = path.resolve(PROFILE_PATH, profile["avatar"]);
-  await upwork.page.waitForSelector('input[type="file"]');
-  const [fileBox] = await Promise["all"]([
-    upwork.page.waitForFileChooser(),
-    upwork.page.click('input[type="file"]'),
-  ]);
-  await fileBox.accept([imagePath]);
-  await wait(500);
-  const saveBtn = await upwork.page.waitForSelector(
-    'button[data-qa="btn-save"]'
-  );
-  await saveBtn.click();
-  while (!avatarUploaded) {
-    await wait(800);
-  }
+    const imagePath = path.resolve(PROFILE_PATH, profile["avatar"]);
+    const imageData = await imageToBase64(imagePath);
+    
+    const aa = await upwork.page.evaluate(async(imageData)=>{
+      const binaryData = atob(imageData);
+    
+    const uint8Array = new Uint8Array(binaryData.length);
+
+    for (let i = 0; i < binaryData.length; i++) {
+      uint8Array[i] = binaryData.charCodeAt(i);
+    }
+        const blob = new Blob([uint8Array], { type: "image/png" });
+
+
+
+    const fileObject = new File([blob], "profile.jpg", {
+      type: "image/png",
+    });
+    const cropCoord = { x: 13, y: 0, width: 250, height: 250 };
+    const cropCoordString = cropCoord;
+    
+    const formData = new FormData();
+    formData.append("file", fileObject); // Replace fileObject with your actual File object
+    formData.append("cropCoord", JSON.stringify(cropCoordString));
+
+
+    const postData = formData;
+
+    const url = `https://www.upwork.com/ab/create-profile/api/v2/portrait-upload`;
+    const cookie = document.cookie;
+    var match = document.cookie.match(
+      "(^|;)\\s*oauth2_global_js_token\\s*=\\s*([^;]+)"
+    );
+    var oauth2_global_js_token = match ? match.pop() : "";
+    const authorization = `Bearer ${oauth2_global_js_token}`;
+
+    var match = document.cookie.match("(^|;)\\s*XSRF-TOKEN\\s*=\\s*([^;]+)");
+    const csrf_token = match ? match.pop() : "";
+    
+
+    const fetchOptions = {
+      method: "POST",
+      body: postData,
+      headers: {
+        authority: "www.upwork.com",
+        method: "POST",
+        path: "/ab/proposals/api/v2/application/new",
+        scheme: "https",
+        Accept: "application/json, text/plain, */*",
+        "Accept-Encoding": "gzip, deflate, br, zstd",
+        "Accept-Language": "en-US,en;q=0.9",
+        Authorization: authorization,
+        Cookie: cookie,
+        "Content-Length": "458",
+        // "Content-Type": "multipart/form-data",
+        Origin: "https://www.upwork.com",
+        Priority: "u=1, i",
+        "Sec-Ch-Ua":
+          '"Google Chrome";v="119", "Chromium";v="119", ";Not A Brand";v="99"',
+        "Sec-Ch-Ua-Full-Version-List":
+          '"Chromium";v="119.0.6045.105", "Not?A_Brand";v="24.0.0.0"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": "Windows",
+        "Sec-Ch-Viewport-Width": "1034",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "same-origin",
+        "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Vnd-Eo-Parent-Span-Id": "072cd505-4b49-4dbc-add9-ff38cb36647c",
+        "Vnd-Eo-Span-Id": "0ddb3891-753b-4dd3-8817-e225d0891258",
+        "Vnd-Eo-Trace-Id": "820db21aecc75098-HKG",
+        "X-Odesk-Csrf-Token": csrf_token,
+        "X-Odesk-User-Agent": "oDesk LM",
+        "X-Requested-With": "XMLHttpRequest",
+        "X-Upwork-Accept-Language": "en-US",
+      },
+      credentials: "include",
+    };
+
+    const response = await fetch(url, fetchOptions);
+    const json = await response.json();
+    
+    return json;
+    }, [imageData]);
+      
+
+    console.log(chalk.green('15. Profile Image Upload'))
   await evaluate(
     upwork.page,
     "https://www.upwork.com/ab/create-profile/api/min/v1/update-pv",
