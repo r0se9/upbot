@@ -214,6 +214,9 @@ async function getLocation(page, city, countryCode, AUTH) {
 }
 
 async function createAccount(profile, inboxType, profileName, botName, db) {
+    const locations = await db.get('locations', { country: profile['country']});
+    const location = getRandomElement(locations);
+    console.log(location);
   let inbox;
   if (inboxType === "nospammail") {
     inbox = new NoSpamMail(await NoSpamMail.create());
@@ -465,10 +468,11 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
   // Address and Phone
   const { city, state } = await getLocation(
     upwork.page,
-    profile["city"],
-    profile["countryCode"],
+    location.city,
+    location.countryCode,
     AUTH
   );
+  console.log(city, state)
   console.log(chalk.green("14. Add Location"));
   await evaluate(
     upwork.page,
@@ -476,16 +480,16 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     apiHeaders,
     {
       address: {
-        street: profile["street"],
+        street: getRandomElement(location.streets),
         state,
         additionalInfo: null,
         address: null,
         city,
-        zip: profile["zipcode"],
-        country: profile["country"],
+        zip: getRandomElement(location.zipCodes),
+        country: location.country,
       },
-      phoneNumber: generatePhoneNumber(profile['phone']),
-      phoneCode: profile["countryCode"],
+      phoneNumber: generatePhoneNumber(location.phone),
+      phoneCode: location.countryCode,
     }
   );
 

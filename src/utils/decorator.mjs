@@ -27,7 +27,7 @@ export function updateProgress(text, startTime,  i) {
   const seconds = duration.seconds().toString().padStart(2, '0');
   const elapsedFormatted = `${hours}:${minutes}:${seconds}` // Format as HH:MM:SS
 
-  process.stdout.clearLine();  // Clear the current text
-  process.stdout.cursorTo(0); // Move cursor to start of line
-  process.stdout.write(`${text} ${frame} Elapsed: ${elapsedFormatted}`);
+  // process.stdout.clearLine();  // Clear the current text
+  // process.stdout.cursorTo(0); // Move cursor to start of line
+  process.stdout.write(`\r${text} ${frame} Elapsed: ${elapsedFormatted}`);
 }

@@ -73,18 +73,20 @@ function filterJobs(jobs, exclude){
 		else return false;
 	})
 }
-async function apply(agent, job, gpt, MODE){
+async function apply(agent, job, gpt, MODE, USEGPT){
 
 	console.log('=====' + job.title + '=====')
 	const start = moment();
 	const [coverLetter, {engagementDuration, questions }] = await Promise.all([
 		(async ()=>{
 					const start = moment();
-					const result = await gpt.prompt(getPrompt(job.description));
-					console.log(chalk.green(`GPT is created in ${moment().diff(start)/1000}s`));
-					console.log('======= GPT ====');
-					console.log(result);
-					console.log('================');
+					let result;
+					if(USEGPT){
+						result = await gpt.prompt(getPrompt(job.description));
+						console.log(chalk.green(`GPT is created in ${moment().diff(start)/1000}s`));
+					}else{
+						result = await gpt.default;
+					}
 					return result;
 				})(),
 		(async ()=>{
@@ -171,9 +173,9 @@ async function checkRestrict(agent){
 
 
 }
-async function main(gpt, database, USER, MODE, DEBUG){
+async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 	while(true){
-		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER }, { sort: {createdAt: 1}});
+		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
 			break;
@@ -210,7 +212,7 @@ async function main(gpt, database, USER, MODE, DEBUG){
   		process.stdout.clearLine();
   		process.stdout.cursorTo(0);
 		const job = filteredJobs[0];
-		const result = await apply(agent, job, gpt, MODE);
+		const result = await apply(agent, job, gpt, MODE, USEGPT);
 		await followUp(database, agent, email, job, result, MODE, USER);
 		await agent.close();
 	}

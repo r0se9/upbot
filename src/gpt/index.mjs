@@ -12,6 +12,9 @@ export default class GPT{
 		this.fnPrompt = fn;
 
 	}
+	setDefault(message){
+		this.default = message;
+	}
 	setKnowledgeBase(data){
 		this.base = data;
 	}
