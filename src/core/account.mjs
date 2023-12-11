@@ -472,7 +472,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     location.countryCode,
     AUTH
   );
-  console.log(city, state)
+  
   console.log(chalk.green("14. Add Location"));
   await evaluate(
     upwork.page,
