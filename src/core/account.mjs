@@ -10,16 +10,25 @@ import { click } from "puppeteer-utilz";
 import { hideBin } from "yargs/helpers";
 import { decorate } from "../utils/decorator.mjs";
 import NoSpamMail from "../inbox/nospammail.mjs";
-import GenMail from '../inbox/genmail.mjs';
-import DisposableMail from '../inbox/diposablemail.mjs';
-import FakeMail from '../inbox/fakemail.mjs';
-import TenMail from '../inbox/tenmail.mjs';
+import GenMail from "../inbox/genmail.mjs";
+import DisposableMail from "../inbox/diposablemail.mjs";
+import FakeMail from "../inbox/fakemail.mjs";
+import TenMail from "../inbox/tenmail.mjs";
 import { evaluate, readFileAsync } from "../browser/function.mjs";
 import { wait } from "../utils/time.mjs";
-import { getRandomElement } from '../utils/lib.mjs';
+import { getRandomElement } from "../utils/lib.mjs";
+import Gmail from "../inbox/gmail.mjs";
 decorate();
 const PROFILE_PATH = "./static/profiles";
-const AVAILABLE_INBOXes = ["nospammail", "genmail", "tenmail", "fakemail", "dispmail", "random"];
+const AVAILABLE_INBOXes = [
+  "nospammail",
+  "genmail",
+  "tenmail",
+  "fakemail",
+  "dispmail",
+  "random",
+  "gmail",
+];
 const GQL_URL = "https://www.upwork.com/api/graphql/v1";
 dotenv.config();
 const argv = yargs(hideBin(process.argv))
@@ -214,408 +223,410 @@ async function getLocation(page, city, countryCode, AUTH) {
 }
 
 async function createAccount(profile, inboxType, profileName, botName, db) {
-    const locations = await db.get('locations', { country: profile['country']});
-    const location = getRandomElement(locations);
-    // console.log(location);
+  const locations = await db.get("locations", { country: profile["country"] });
+  const location = getRandomElement(locations);
+  // console.log(location);
   let inbox;
   if (inboxType === "nospammail") {
     inbox = new NoSpamMail(await NoSpamMail.create());
-  } else if(inboxType === "genmail"){
+  } else if (inboxType === "genmail") {
     inbox = new GenMail(await GenMail.create());
-  } else if(inboxType === 'tenmail'){
+  } else if (inboxType === "tenmail") {
     inbox = new TenMail(await TenMail.create());
-  } else if(inboxType === 'fakemail'){
+  } else if (inboxType === "fakemail") {
     inbox = new FakeMail(await FakeMail.create());
-  } else if(inboxType === 'dispmail'){
+  } else if (inboxType === "dispmail") {
     inbox = new DisposableMail(await DisposableMail.create());
-  } else if(inboxType === 'random'){
+  } else if (inboxType === "gmail") {
+    inbox = new Gmail(Gmail.create(process.env.GMAIL));
+  } else if (inboxType === "random") {
     const MAIL = getRandomElement([
       NoSpamMail,
       GenMail,
       TenMail,
       FakeMail,
-      DisposableMail
-      ]);
+      DisposableMail,
+    ]);
     inbox = new MAIL(await MAIL.create());
   }
-  console.log(`===> ${inbox.email}`)
+  console.log(`===> ${inbox.email}`);
   const pathToExtension = path.resolve("./static/extensions/cookies");
   const upwork = new Browser(!argv.debug);
-  try{
+  try {
     await upwork.signUp(
-    {
-      user: inbox.email,
-      password: process.env.PASSWORD,
-    },
-    { firstName: profile["firstName"], secondName: profile["lastName"] },
-    inbox,
-    [`--disable-extensions-except=${pathToExtension}`,
-      `--load-extension=${pathToExtension}`,]
-  );
-  console.log("Successfully Verified.");
-
-  await upwork.navigate("https://www.upwork.com/nx/create-profile/", {
-    waitUntil: "networkidle0",
-  });
-  const AUTH = await getAuthData(upwork.page);
-
-  let avatarUploaded = false;
-  upwork.page.on("requestfinished", (data) => {
-    if (
-      data.url() ===
-      "https://www.upwork.com/ab/create-profile/api/v2/portrait-upload"
-    ) {
-      avatarUploaded = true;
-      console.log("(:+) Avatar is uploaded successfully");
-    }
-  });
-
-  const gqlHeaders = generateGQLHeader(AUTH["oauth"]);
-  const apiHeaders = generateAPIHeader(AUTH["oauth"], AUTH["token"]);
-
-  // Experience
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "\x0amutation updateTalentQuestionChoices($input: UpdateTalentQuestionChoicesInput) {\x0a  updateTalentQuestionChoices(input: $input) {\x0a      status\x0a    }\x0a}",
-    variables: {
-      input: {
-        questionId: "EXPERIENCE",
-        choiceIds: "FREELANCED_BEFORE",
+      {
+        user: inbox.email,
+        password: process.env.PASSWORD,
       },
-    },
-  });
-  console.log(chalk.green("1. Experience"));
+      { firstName: profile["firstName"], secondName: profile["lastName"] },
+      inbox,
+      [
+        `--disable-extensions-except=${pathToExtension}`,
+        `--load-extension=${pathToExtension}`,
+      ]
+    );
+    console.log("Successfully Verified.");
 
-  // GOAL
+    await upwork.navigate("https://www.upwork.com/nx/create-profile/", {
+      waitUntil: "networkidle0",
+    });
+    const AUTH = await getAuthData(upwork.page);
 
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "\x0amutation updateTalentQuestionChoices($input: UpdateTalentQuestionChoicesInput) {\x0a  updateTalentQuestionChoices(input: $input) {\x0a      status\x0a    }\x0a}",
-    variables: {
-      input: {
-        questionId: "FREELANCE_GOAL",
-        choiceIds: ["GET_EXPERIENCE"],
+    let avatarUploaded = false;
+    upwork.page.on("requestfinished", (data) => {
+      if (
+        data.url() ===
+        "https://www.upwork.com/ab/create-profile/api/v2/portrait-upload"
+      ) {
+        avatarUploaded = true;
+        console.log("(:+) Avatar is uploaded successfully");
+      }
+    });
+
+    const gqlHeaders = generateGQLHeader(AUTH["oauth"]);
+    const apiHeaders = generateAPIHeader(AUTH["oauth"], AUTH["token"]);
+
+    // Experience
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "\x0amutation updateTalentQuestionChoices($input: UpdateTalentQuestionChoicesInput) {\x0a  updateTalentQuestionChoices(input: $input) {\x0a      status\x0a    }\x0a}",
+      variables: {
+        input: {
+          questionId: "EXPERIENCE",
+          choiceIds: "FREELANCED_BEFORE",
+        },
       },
-    },
-  });
-  console.log(chalk.green("2. Goal"));
-  // Work Preference 1
+    });
+    console.log(chalk.green("1. Experience"));
 
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "\x0amutation updateTalentQuestionChoices($input: UpdateTalentQuestionChoicesInput) {\x0a  updateTalentQuestionChoices(input: $input) {\x0a      status\x0a    }\x0a}",
-    variables: {
-      input: {
-        questionId: "DELIVERY_MODEL",
-        choiceIds: ["MARKETPLACE"],
+    // GOAL
+
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "\x0amutation updateTalentQuestionChoices($input: UpdateTalentQuestionChoicesInput) {\x0a  updateTalentQuestionChoices(input: $input) {\x0a      status\x0a    }\x0a}",
+      variables: {
+        input: {
+          questionId: "FREELANCE_GOAL",
+          choiceIds: ["GET_EXPERIENCE"],
+        },
       },
-    },
-  });
-  console.log(chalk.green("3. Work Preference One"));
+    });
+    console.log(chalk.green("2. Goal"));
+    // Work Preference 1
 
-  // Work Preference 2
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "\x0amutation updateTalentQuestionChoices($input: UpdateTalentQuestionChoicesInput) {\x0a  updateTalentQuestionChoices(input: $input) {\x0a      status\x0a    }\x0a}",
+      variables: {
+        input: {
+          questionId: "DELIVERY_MODEL",
+          choiceIds: ["MARKETPLACE"],
+        },
+      },
+    });
+    console.log(chalk.green("3. Work Preference One"));
 
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "\x0a    mutation updateFreelancerContractToHire($input: FreelancerContractToHireInput!) {\x0a        updateFreelancerContractToHire(input: $input) {\x0a            status\x0a        }\x0a    }",
-    variables: { input: { contractToHire: true } },
-  });
-  console.log(chalk.green("4. Work Preference Two"));
-  // Start Profile Process
+    // Work Preference 2
 
-  await evaluate(
-    upwork.page,
-    "https://www.upwork.com/ab/create-profile/api/min/v1/start-profile-process",
-    apiHeaders,
-    {}
-  );
-  console.log(chalk.yellow(" Profile Process Started"));
-  // profile title
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "\x0a    mutation updateFreelancerContractToHire($input: FreelancerContractToHireInput!) {\x0a        updateFreelancerContractToHire(input: $input) {\x0a            status\x0a        }\x0a    }",
+      variables: { input: { contractToHire: true } },
+    });
+    console.log(chalk.green("4. Work Preference Two"));
+    // Start Profile Process
 
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "mutation updateTalentProfileTitle($input: TalentProfileTitleInput!){ \x0a    updateTalentProfileTitle(input: $input){      \x0a      status\x0a    }}",
-    variables: { input: { title: profile["professional"] } },
-  });
-  console.log(chalk.green("5. Add Professional"));
+    await evaluate(
+      upwork.page,
+      "https://www.upwork.com/ab/create-profile/api/min/v1/start-profile-process",
+      apiHeaders,
+      {}
+    );
+    console.log(chalk.yellow(" Profile Process Started"));
+    // profile title
 
-  // employement
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "mutation updateTalentProfileTitle($input: TalentProfileTitleInput!){ \x0a    updateTalentProfileTitle(input: $input){      \x0a      status\x0a    }}",
+      variables: { input: { title: profile["professional"] } },
+    });
+    console.log(chalk.green("5. Add Professional"));
 
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query: `mutation updateTalentEmploymentRecords($records: [TalentEmploymentRecordInput!]){ 
+    // employement
+
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query: `mutation updateTalentEmploymentRecords($records: [TalentEmploymentRecordInput!]){ 
         updateTalentEmploymentRecords( records: $records ){
            id
         }}`,
-    variables: {
-      records: profile["workXP"].map((el) => ({
-        companyName: el["company"],
-        jobTitle: el["role"],
-        description: el['description'].join('\n'),
-        city: null,
-        country: "HKG",
-        startDate: el["start"],
-        endDate: el["end"],
-      })),
-    },
-  });
-  console.log(chalk.green("6. Add Employment History"));
+      variables: {
+        records: profile["workXP"].map((el) => ({
+          companyName: el["company"],
+          jobTitle: el["role"],
+          description: el["description"].join("\n"),
+          city: null,
+          country: "HKG",
+          startDate: el["start"],
+          endDate: el["end"],
+        })),
+      },
+    });
+    console.log(chalk.green("6. Add Employment History"));
 
-  // education
+    // education
 
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "mutation updateTalentEducationRecords($records: [TalentEducationRecordInput!]){ \x0a updateTalentEducationRecords( records: $records ){ id }}",
-    variables: {
-      records: profile["education"].map((el) => ({
-        institutionName: el["university"],
-        areaOfStudy: el["field"],
-        degree: el["degree"],
-        dateStarted: el["start"],
-        dateEnded: el["end"],
-      })),
-    },
-  });
-  console.log(chalk.green("7. Add Education"));
-  // Languages
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "mutation updateTalentEducationRecords($records: [TalentEducationRecordInput!]){ \x0a updateTalentEducationRecords( records: $records ){ id }}",
+      variables: {
+        records: profile["education"].map((el) => ({
+          institutionName: el["university"],
+          areaOfStudy: el["field"],
+          degree: el["degree"],
+          dateStarted: el["start"],
+          dateEnded: el["end"],
+        })),
+      },
+    });
+    console.log(chalk.green("7. Add Education"));
+    // Languages
 
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "mutation updateTalentLanguageRecords($records: [TalentLanguageInput!]){ \x0a  updateTalentLanguageRecords(records: $records){\x0a    id\x0a  }}",
-    variables: {
-      records: [
-        {
-          language: {
-            iso639Code: "en",
-            active: true,
-            englishName: "English",
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "mutation updateTalentLanguageRecords($records: [TalentLanguageInput!]){ \x0a  updateTalentLanguageRecords(records: $records){\x0a    id\x0a  }}",
+      variables: {
+        records: [
+          {
+            language: {
+              iso639Code: "en",
+              active: true,
+              englishName: "English",
+            },
+            proficiencyLevel: { code: "flul" },
           },
-          proficiencyLevel: { code: "flul" },
-        },
-      ],
-    },
-  });
-  console.log(chalk.green("8. Add Language"));
-
-  // skills
-
-  const skills = await getSkillIds(upwork.page, profile["skills"], AUTH);
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "mutation updateTalentProfileSkills($input: TalentProfileSkillsInput!){ \x0a  updateTalentProfileSkills(input: $input){\x0a    status\x0a  }}",
-    variables: { input: { skills: skills } },
-  });
-  console.log(chalk.green("9. Add Skills"));
-  // Overview
-
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "mutation updateTalentProfileDescription($input: TalentProfileDescriptionInput!){ \x0a  updateTalentProfileDescription(input: $input){\x0a    status\x0a  }}",
-    variables: {
-      input: { description: profile["overview"] },
-    },
-  });
-  console.log(chalk.green("10. Add Overview"));
-
-  // categories
-  const categories = await getServiceIds(
-    upwork.page,
-    profile["services"],
-    AUTH
-  );
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "mutation updateTalentProfileSubCategories($input: TalentProfileSubCategoriesInput!){ \x0a  updateTalentProfileSubCategories(input: $input){\x0a    status\x0a  }}",
-    variables: {
-      input: {
-        subCategoryIDs: categories,
+        ],
       },
-    },
-  });
-  console.log(chalk.green("11. Add Categories"));
+    });
+    console.log(chalk.green("8. Add Language"));
 
-  // Rate
+    // skills
 
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "mutation updateTalentProfileHourlyRate($input: TalentProfileHourlyRateInput!){ \x0a  updateTalentProfileHourlyRate(input: $input){      \x0a    status\x0a  }}",
-    variables: {
-      input: {
-        hourlyRate: {
-          amount: profile["hourRate"],
-          currency: "USD",
+    const skills = await getSkillIds(upwork.page, profile["skills"], AUTH);
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "mutation updateTalentProfileSkills($input: TalentProfileSkillsInput!){ \x0a  updateTalentProfileSkills(input: $input){\x0a    status\x0a  }}",
+      variables: { input: { skills: skills } },
+    });
+    console.log(chalk.green("9. Add Skills"));
+    // Overview
+
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "mutation updateTalentProfileDescription($input: TalentProfileDescriptionInput!){ \x0a  updateTalentProfileDescription(input: $input){\x0a    status\x0a  }}",
+      variables: {
+        input: { description: profile["overview"] },
+      },
+    });
+    console.log(chalk.green("10. Add Overview"));
+
+    // categories
+    const categories = await getServiceIds(
+      upwork.page,
+      profile["services"],
+      AUTH
+    );
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "mutation updateTalentProfileSubCategories($input: TalentProfileSubCategoriesInput!){ \x0a  updateTalentProfileSubCategories(input: $input){\x0a    status\x0a  }}",
+      variables: {
+        input: {
+          subCategoryIDs: categories,
         },
       },
-    },
-  });
-  console.log(chalk.green("12. Add Hourly Rate"));
+    });
+    console.log(chalk.green("11. Add Categories"));
 
-  // Complete Onboarding
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query: "mutation {\x0a  talentOnboardingComplete\x0a}",
-    variables: null,
-  });
+    // Rate
 
-  // Birthday
-
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query:
-      "mutation saveDateOfBirth($input: DateOfBirthInput!) {\x0a  saveDateOfBirth(input: $input)\x0a}",
-    variables: {
-      input: { dateOfBirth: profile["birthday"] },
-    },
-  });
-  console.log(chalk.green("13. Add Address and Phone number"));
-  // Address and Phone
-  const { city, state } = await getLocation(
-    upwork.page,
-    location.city,
-    location.countryCode,
-    AUTH
-  );
-  
-  console.log(chalk.green("14. Add Location"));
-  await evaluate(
-    upwork.page,
-    "https://www.upwork.com/ab/create-profile/api/min/v1/save-address-phone",
-    apiHeaders,
-    {
-      address: {
-        street: getRandomElement(location.streets),
-        state,
-        additionalInfo: null,
-        address: null,
-        city,
-        zip: getRandomElement(location.zipCodes),
-        country: location.country,
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "mutation updateTalentProfileHourlyRate($input: TalentProfileHourlyRateInput!){ \x0a  updateTalentProfileHourlyRate(input: $input){      \x0a    status\x0a  }}",
+      variables: {
+        input: {
+          hourlyRate: {
+            amount: profile["hourRate"],
+            currency: "USD",
+          },
+        },
       },
-      phoneNumber: generatePhoneNumber(location.phone),
-      phoneCode: location.countryCode,
+    });
+    console.log(chalk.green("12. Add Hourly Rate"));
+
+    // Complete Onboarding
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query: "mutation {\x0a  talentOnboardingComplete\x0a}",
+      variables: null,
+    });
+
+    // Birthday
+
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query:
+        "mutation saveDateOfBirth($input: DateOfBirthInput!) {\x0a  saveDateOfBirth(input: $input)\x0a}",
+      variables: {
+        input: { dateOfBirth: profile["birthday"] },
+      },
+    });
+    console.log(chalk.green("13. Add Address and Phone number"));
+    // Address and Phone
+    const { city, state } = await getLocation(
+      upwork.page,
+      location.city,
+      location.countryCode,
+      AUTH
+    );
+
+    console.log(chalk.green("14. Add Location"));
+    await evaluate(
+      upwork.page,
+      "https://www.upwork.com/ab/create-profile/api/min/v1/save-address-phone",
+      apiHeaders,
+      {
+        address: {
+          street: getRandomElement(location.streets),
+          state,
+          additionalInfo: null,
+          address: null,
+          city,
+          zip: getRandomElement(location.zipCodes),
+          country: location.country,
+        },
+        phoneNumber: generatePhoneNumber(location.phone),
+        phoneCode: location.countryCode,
+      }
+    );
+
+    console.log(chalk.green("15. Save Address and Phone"));
+
+    // Upload profile Image
+
+    await upwork.navigate("https://www.upwork.com/nx/create-profile/location");
+    await click({
+      component: upwork.page,
+      selector: 'button[data-qa="open-loader"]',
+    });
+    const imagePath = path.resolve(PROFILE_PATH, profile["avatar"]);
+    await upwork.page.waitForSelector('input[type="file"]');
+    const [fileBox] = await Promise["all"]([
+      upwork.page.waitForFileChooser(),
+      upwork.page.click('input[type="file"]'),
+    ]);
+    await fileBox.accept([imagePath]);
+    await wait(500);
+    const saveBtn = await upwork.page.waitForSelector(
+      'button[data-qa="btn-save"]'
+    );
+    await saveBtn.click();
+    while (!avatarUploaded) {
+      await wait(800);
     }
-  );
+    await evaluate(
+      upwork.page,
+      "https://www.upwork.com/ab/create-profile/api/min/v1/update-pv",
+      apiHeaders,
+      {}
+    );
+    // Complete Onboarding
+    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
+      query: "mutation {\x0a  talentOnboardingComplete\x0a}",
+      variables: null,
+    });
+    // Review
 
-  console.log(chalk.green("15. Save Address and Phone"));
+    await evaluate(
+      upwork.page,
+      "https://www.upwork.com/ab/create-profile/api/v1/review",
+      apiHeaders,
+      {}
+    );
 
-  // Upload profile Image
+    //NOTIFICATION
+    console.log(chalk.green("16. Notification Setting"));
+    await evaluate(
+      upwork.page,
+      "https://www.upwork.com/ab/notification-settings/api/settings",
+      apiHeaders,
+      {
+        desktopCounter: "all",
+        desktopNotify: "all",
+        desktopSound: "false",
+        mobileNotify: "all",
+        mobileCounter: "all",
+        mobileSound: "false",
+        dashEmailFreq: "immediate",
+        dashEmailWhen: "all",
+        dashEmailPresence: "always",
+        allContracts: "mine",
+        allRecruiting: "mine",
+        receive_documents_digitally: false,
+        dash_desktop_all: true,
+        dash_desktop_important: true,
+        dash_desktop_never: true,
+        dash_desktop_sound: true,
+        dash_message_counter_all: true,
+        dash_message_counter_important: true,
+        dash_email_approximately: true,
+        dash_email_all: true,
+        dash_email_important: true,
+        dash_email_presence: true,
+        er_job_posted: true,
+        er_japp_submitted: true,
+        er_intv_acc: true,
+        er_intv_declined: true,
+        er_offer_updated: true,
+        er_job_will_expire: true,
+        er_job_expired: true,
+        er_no_intv: true,
+        pja_intv_accepted: true,
+        pja_offer: true,
+        pja_japp_declined: true,
+        pja_japp_rejected: true,
+        pja_job_change: true,
+        pja_japp_withdrawn: true,
+        cntr_hire: true,
+        cntr_timelog_begins: true,
+        cntr_terms: true,
+        cntr_end: true,
+        cntr_timelog: true,
+        cntr_fb_change: true,
+        cntr_offline_summary: true,
+        cntr_bpa_wk_buyer: true,
+        cntr_misc: true,
+        cntr_bpa: true,
+        grp_mem: true,
+        ref_profile: true,
+        ref_invite: true,
+        cntr_revoke: true,
+        subscription_event: true,
+        on_board_msg: true,
+        misc_local: true,
+        who_viewed_job: true,
+        connects_expiry: true,
+        connects_purchase: true,
+        job_recommendations: true,
+        marketing_email: false,
+        tc: [],
+      }
+    );
 
-  await upwork.navigate("https://www.upwork.com/nx/create-profile/location");
-  await click({
-    component: upwork.page,
-    selector: 'button[data-qa="open-loader"]',
-  });
-  const imagePath = path.resolve(PROFILE_PATH, profile["avatar"]);
-  await upwork.page.waitForSelector('input[type="file"]');
-  const [fileBox] = await Promise["all"]([
-    upwork.page.waitForFileChooser(),
-    upwork.page.click('input[type="file"]'),
-  ]);
-  await fileBox.accept([imagePath]);
-  await wait(500);
-  const saveBtn = await upwork.page.waitForSelector(
-    'button[data-qa="btn-save"]'
-  );
-  await saveBtn.click();
-  while (!avatarUploaded) {
-    await wait(800);
-  }
-  await evaluate(
-    upwork.page,
-    "https://www.upwork.com/ab/create-profile/api/min/v1/update-pv",
-    apiHeaders,
-    {}
-  );
-  // Complete Onboarding
-  await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-    query: "mutation {\x0a  talentOnboardingComplete\x0a}",
-    variables: null,
-  });
-  // Review
-
-  await evaluate(
-    upwork.page,
-    "https://www.upwork.com/ab/create-profile/api/v1/review",
-    apiHeaders,
-    {}
-  );
-
-  //NOTIFICATION
-  console.log(chalk.green("16. Notification Setting"));
-  await evaluate(
-    upwork.page,
-    "https://www.upwork.com/ab/notification-settings/api/settings",
-    apiHeaders,
-    {
-      desktopCounter: "all",
-      desktopNotify: "all",
-      desktopSound: "false",
-      mobileNotify: "all",
-      mobileCounter: "all",
-      mobileSound: "false",
-      dashEmailFreq: "immediate",
-      dashEmailWhen: "all",
-      dashEmailPresence: "always",
-      allContracts: "mine",
-      allRecruiting: "mine",
-      receive_documents_digitally: false,
-      dash_desktop_all: true,
-      dash_desktop_important: true,
-      dash_desktop_never: true,
-      dash_desktop_sound: true,
-      dash_message_counter_all: true,
-      dash_message_counter_important: true,
-      dash_email_approximately: true,
-      dash_email_all: true,
-      dash_email_important: true,
-      dash_email_presence: true,
-      er_job_posted: true,
-      er_japp_submitted: true,
-      er_intv_acc: true,
-      er_intv_declined: true,
-      er_offer_updated: true,
-      er_job_will_expire: true,
-      er_job_expired: true,
-      er_no_intv: true,
-      pja_intv_accepted: true,
-      pja_offer: true,
-      pja_japp_declined: true,
-      pja_japp_rejected: true,
-      pja_job_change: true,
-      pja_japp_withdrawn: true,
-      cntr_hire: true,
-      cntr_timelog_begins: true,
-      cntr_terms: true,
-      cntr_end: true,
-      cntr_timelog: true,
-      cntr_fb_change: true,
-      cntr_offline_summary: true,
-      cntr_bpa_wk_buyer: true,
-      cntr_misc: true,
-      cntr_bpa: true,
-      grp_mem: true,
-      ref_profile: true,
-      ref_invite: true,
-      cntr_revoke: true,
-      subscription_event: true,
-      on_board_msg: true,
-      misc_local: true,
-      who_viewed_job: true,
-      connects_expiry: true,
-      connects_purchase: true,
-      job_recommendations: true,
-      marketing_email: false,
-      tc: [],
-    }
-  );
-
-  console.log("Account has been created...");
-
-  }catch(e){
-    console.log(chalk.red('Error: while account creation...'))
-    console.log(e)
-   await upwork.close();
+    console.log("Account has been created...");
+  } catch (e) {
+    console.log(chalk.red("Error: while account creation..."));
+    console.log(e);
+    await upwork.close();
     return false;
-
   }
-  
+
   try {
     console.log(chalk.yellow("Additional Configuration"));
     await upwork.navigate("https://www.upwork.com/nx/agencies/create/");
@@ -675,7 +686,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     //   isPremium: false,
     // });
     console.log(chalk.green("Account is saved in database"));
-  }finally {
+  } finally {
     // await page.close();
     await upwork.close();
     return true;
@@ -701,9 +712,8 @@ async function main() {
         database
       );
     } catch (e) {
-
       console.log(chalk.red("Error"));
-      console.log(e)
+      console.log(e);
     }
   }
   await database.close();
