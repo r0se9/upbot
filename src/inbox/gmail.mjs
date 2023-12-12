@@ -1,6 +1,6 @@
 import { generateText } from "../utils/lib.mjs";
 import fs from "fs";
-import GMail from "../gmail.js";
+import GMail from "../utils/gmail.mjs";
 // import moment from "moment-timezone";cs
 export default class Gmail {
   constructor(email) {
