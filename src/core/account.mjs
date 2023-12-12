@@ -106,6 +106,28 @@ async function getAuthData(page) {
   }
   return data;
 }
+async function getAGToken(page){
+  // const subClientId = await page.evaluate(()=>{
+  //   return window.NUXT_APP_CONFIG.subordinateClientId;
+  // })
+  // const token = await page.evaluate(async(url)=>{
+  //   const response = await fetch(url, { credentials: 'include' });
+  //   return response.text();
+  // }, ['https://auth.upwork.com/api/v3/oauth2/token/subordinate/v3/' + subClientId])  
+  const tokenRegex = /token":\s*"([^"]+)"/;
+  
+  // Execute the regular expression to find the token
+  const match = tokenRegex.exec(page);
+
+  if (match && match[1]) {
+    // Output the extracted token
+    console.log('Extracted Token:', match[1]);
+  } else {
+    console.log('No token found!');
+  }
+  return match[1]
+  
+}
 function generateGQLHeader(token) {
   return {
     Accept: "*/*",
@@ -676,42 +698,98 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
   
   try {
     console.log(chalk.yellow("Additional Configuration"));
+    // await upwork.navigate('https://www.upwork.com/nx/find-work');
+    let rawToken;
+    upwork.page.on('response', async response => {
+    const responseUrl = response.url();
+    
+    // Check if the response URL matches your specific URL
+    if (responseUrl.includes('https://auth.upwork.com/api/v3/oauth2/token/subordinate/v3/')) {
+      // Process the response here
+      
+      
+      // Optionally, you can work with the response body
+       rawToken = await response.text();
+      
+    }
+  });
     await upwork.navigate("https://www.upwork.com/nx/agencies/create/");
-    const input = await upwork.page.waitForSelector("#agency-name-input");
-    await upwork.page.type("#agency-name-input", process.env.AGENCY_NAME);
-    await wait(100);
-    const continueBtn = await upwork.page.$x(
-      '//button[contains(text(), "Continue")]'
-    );
-    await continueBtn[0].click();
-    console.log("Continue is clicked");
-    await wait(100);
-    const confirmBtn = await upwork.page.$x(
-      '//button[contains(text(), "Continue with Basic")]'
-    );
-    console.log("Continue with Basic is clicked");
-    await Promise.all([confirmBtn[0].click(), upwork.page.waitForNavigation()]);
-    await upwork.navigate("https://www.upwork.com/nx/ag/settings/", {
-      waitUntil: "networkidle2",
-    });
-    const closeAgBtn = await upwork.page.waitForXPath(
-      '//button[contains(text(), "Close my Agency")]',
-      {
-        visible: true,
-        timeout: 10000, // waits for 10 seconds
-      }
-    );
-    // const modelBtn = await upwork.page.$x('//button[contains(text(), "Confirm")]');
-    await closeAgBtn.click();
-    console.log(`Close AG is clicked`);
-    const modalBtn = await upwork.page.waitForXPath(
-      '//button[contains(text(), "Confirm")]',
-      {
-        visible: true,
-        timeout: 10000, // waits for 5 seconds
-      }
-    );
-    await Promise.all([modalBtn.click(), upwork.page.waitForNavigation()]);
+    while(!rawToken){
+      await wait(100);
+    }
+    const token = await getAGToken(rawToken);
+    const url = 'https://www.upwork.com/api/graphql/v1';
+    const headers = {
+        Accept: "*/*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          "scheme": "https",
+          "Accept-Encoding": "gzip, deflate, br, zstd",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Content-Type": "application/json",
+          Authorization: "bearer " + token,
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+          "Referer": "https://www.upwork.com/nx/agencies/create/"
+    };
+    const agCreatedata = {
+  "query": "mutation createAgency($name: String!) {\n  createAgency(name: $name) {\n    agencyId\n  }\n}",
+  "variables": {
+    "name": process.env.AGENCY_NAME
+    }
+    }
+    const resultAG = await evaluate(upwork.page, url, headers, agCreatedata);
+    
+    
+
+    const agId = resultAG.data.createAgency.agencyId;
+    const agCloseData = {
+    "query": "\n      mutation closeAgency($id: ID!) {\n        closeAgency(id: $id)\n      }\n    ",
+    "variables": {
+        "id": agId
+    }
+}
+    await evaluate(upwork.page, GQL_URL, headers, agCloseData);
+    
+    // const input = await upwork.page.waitForSelector("#agency-name-input");
+    // await upwork.page.type("#agency-name-input", process.env.AGENCY_NAME);
+    // await wait(100);
+    // const continueBtn = await upwork.page.$x(
+    //   '//button[contains(text(), "Continue")]'
+    // );
+    // await continueBtn[0].click();
+    // console.log("Continue is clicked");
+    // await wait(100);
+    // const confirmBtn = await upwork.page.$x(
+    //   '//button[contains(text(), "Continue with Basic")]'
+    // );
+    // console.log("Continue with Basic is clicked");
+    // await Promise.all([confirmBtn[0].click(), upwork.page.waitForNavigation()]);
+    // await upwork.navigate("https://www.upwork.com/nx/ag/settings/", {
+    //   waitUntil: "networkidle2",
+    // });
+    // const closeAgBtn = await upwork.page.waitForXPath(
+    //   '//button[contains(text(), "Close my Agency")]',
+    //   {
+    //     visible: true,
+    //     timeout: 10000, // waits for 10 seconds
+    //   }
+    // );
+    // // const modelBtn = await upwork.page.$x('//button[contains(text(), "Confirm")]');
+    // await closeAgBtn.click();
+    // console.log(`Close AG is clicked`);
+    // const modalBtn = await upwork.page.waitForXPath(
+    //   '//button[contains(text(), "Confirm")]',
+    //   {
+    //     visible: true,
+    //     timeout: 10000, // waits for 5 seconds
+    //   }
+    // );
+    // await Promise.all([modalBtn.click(), upwork.page.waitForNavigation()]);
     console.log("Hurray!");
     await db.create("accounts", {
       email: inbox.email,
@@ -724,14 +802,15 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     console.log(chalk.green("Premium Account is saved in database"));
   } catch (e) {
     console.log(chalk.red("Error: additional configuration"));
-    // await db.create("accounts", {
-    //   email: inbox.email,
-    //   type: inboxType,
-    //   botName: botName,
-    //   status: "active",
-    //   name: profileName,
-    //   isPremium: false,
-    // });
+    await db.create("accounts", {
+      email: inbox.email,
+      type: inboxType,
+      botName: botName,
+      status: "active",
+      name: profileName,
+      isPremium: false,
+    });
+    console.log(e)
     console.log(chalk.green("Account is saved in database"));
   }finally {
     // await page.close();

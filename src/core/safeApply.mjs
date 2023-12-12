@@ -174,6 +174,7 @@ async function checkRestrict(agent){
 
 }
 async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
+
 	while(true){
 		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
@@ -212,6 +213,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
   		process.stdout.clearLine();
   		process.stdout.cursorTo(0);
 		const job = filteredJobs[0];
+		console.log(USEGPT ? "GPT MODE" : "MANNUAL MODE")
 		const result = await apply(agent, job, gpt, MODE, USEGPT);
 		await followUp(database, agent, email, job, result, MODE, USER);
 		await agent.close();
