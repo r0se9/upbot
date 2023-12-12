@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import cheerio from "cheerio";
+import fs from 'fs';
 
 export function parseHtml(input) {
   const $ = cheerio.load(input);
@@ -77,3 +78,16 @@ export async function retry(validator, callback, timeout, maximumTry) {
 
   throw new Error("Maximum Retry Timeout");
 }
+// Function to convert image to base64
+export const imageToBase64 = (filePath) => new Promise((resolve, reject) => {
+  // Read the file into a buffer
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      reject(err);
+      return;
+    }
+    // Convert the buffer to a base64 string
+    const base64Image = data.toString('base64');
+    resolve(base64Image);
+  });
+});

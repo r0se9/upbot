@@ -16,8 +16,8 @@ import FakeMail from "../inbox/fakemail.mjs";
 import TenMail from "../inbox/tenmail.mjs";
 import { evaluate, readFileAsync } from "../browser/function.mjs";
 import { wait } from "../utils/time.mjs";
-import { getRandomElement } from "../utils/lib.mjs";
 import Gmail from "../inbox/gmail.mjs";
+import { getRandomElement, imageToBase64 } from "../utils/lib.mjs";
 decorate();
 const PROFILE_PATH = "./static/profiles";
 const AVAILABLE_INBOXes = [
@@ -114,6 +114,27 @@ async function getAuthData(page) {
     }
   }
   return data;
+}
+async function getAGToken(page) {
+  // const subClientId = await page.evaluate(()=>{
+  //   return window.NUXT_APP_CONFIG.subordinateClientId;
+  // })
+  // const token = await page.evaluate(async(url)=>{
+  //   const response = await fetch(url, { credentials: 'include' });
+  //   return response.text();
+  // }, ['https://auth.upwork.com/api/v3/oauth2/token/subordinate/v3/' + subClientId])
+  const tokenRegex = /token":\s*"([^"]+)"/;
+
+  // Execute the regular expression to find the token
+  const match = tokenRegex.exec(page);
+
+  if (match && match[1]) {
+    // Output the extracted token
+    console.log("Extracted Token:", match[1]);
+  } else {
+    console.log("No token found!");
+  }
+  return match[1];
 }
 function generateGQLHeader(token) {
   return {
@@ -271,17 +292,6 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       waitUntil: "networkidle0",
     });
     const AUTH = await getAuthData(upwork.page);
-
-    let avatarUploaded = false;
-    upwork.page.on("requestfinished", (data) => {
-      if (
-        data.url() ===
-        "https://www.upwork.com/ab/create-profile/api/v2/portrait-upload"
-      ) {
-        avatarUploaded = true;
-        console.log("(:+) Avatar is uploaded successfully");
-      }
-    });
 
     const gqlHeaders = generateGQLHeader(AUTH["oauth"]);
     const apiHeaders = generateAPIHeader(AUTH["oauth"], AUTH["token"]);
@@ -511,25 +521,95 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     // Upload profile Image
 
     await upwork.navigate("https://www.upwork.com/nx/create-profile/location");
-    await click({
-      component: upwork.page,
-      selector: 'button[data-qa="open-loader"]',
-    });
+
     const imagePath = path.resolve(PROFILE_PATH, profile["avatar"]);
-    await upwork.page.waitForSelector('input[type="file"]');
-    const [fileBox] = await Promise["all"]([
-      upwork.page.waitForFileChooser(),
-      upwork.page.click('input[type="file"]'),
-    ]);
-    await fileBox.accept([imagePath]);
-    await wait(500);
-    const saveBtn = await upwork.page.waitForSelector(
-      'button[data-qa="btn-save"]'
+    const imageData = await imageToBase64(imagePath);
+
+    const aa = await upwork.page.evaluate(
+      async (imageData) => {
+        const binaryData = atob(imageData);
+
+        const uint8Array = new Uint8Array(binaryData.length);
+
+        for (let i = 0; i < binaryData.length; i++) {
+          uint8Array[i] = binaryData.charCodeAt(i);
+        }
+        const blob = new Blob([uint8Array], { type: "image/png" });
+
+        const fileObject = new File([blob], "profile.jpg", {
+          type: "image/png",
+        });
+        const cropCoord = { x: 13, y: 0, width: 250, height: 250 };
+        const cropCoordString = cropCoord;
+
+        const formData = new FormData();
+        formData.append("file", fileObject); // Replace fileObject with your actual File object
+        formData.append("cropCoord", JSON.stringify(cropCoordString));
+
+        const postData = formData;
+
+        const url = `https://www.upwork.com/ab/create-profile/api/v2/portrait-upload`;
+        const cookie = document.cookie;
+        var match = document.cookie.match(
+          "(^|;)\\s*oauth2_global_js_token\\s*=\\s*([^;]+)"
+        );
+        var oauth2_global_js_token = match ? match.pop() : "";
+        const authorization = `Bearer ${oauth2_global_js_token}`;
+
+        var match = document.cookie.match(
+          "(^|;)\\s*XSRF-TOKEN\\s*=\\s*([^;]+)"
+        );
+        const csrf_token = match ? match.pop() : "";
+
+        const fetchOptions = {
+          method: "POST",
+          body: postData,
+          headers: {
+            authority: "www.upwork.com",
+            method: "POST",
+            path: "/ab/proposals/api/v2/application/new",
+            scheme: "https",
+            Accept: "application/json, text/plain, */*",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": "en-US,en;q=0.9",
+            Authorization: authorization,
+            Cookie: cookie,
+            "Content-Length": "458",
+            // "Content-Type": "multipart/form-data",
+            Origin: "https://www.upwork.com",
+            Priority: "u=1, i",
+            "Sec-Ch-Ua":
+              '"Google Chrome";v="119", "Chromium";v="119", ";Not A Brand";v="99"',
+            "Sec-Ch-Ua-Full-Version-List":
+              '"Chromium";v="119.0.6045.105", "Not?A_Brand";v="24.0.0.0"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": "Windows",
+            "Sec-Ch-Viewport-Width": "1034",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Vnd-Eo-Parent-Span-Id": "072cd505-4b49-4dbc-add9-ff38cb36647c",
+            "Vnd-Eo-Span-Id": "0ddb3891-753b-4dd3-8817-e225d0891258",
+            "Vnd-Eo-Trace-Id": "820db21aecc75098-HKG",
+            "X-Odesk-Csrf-Token": csrf_token,
+            "X-Odesk-User-Agent": "oDesk LM",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-Upwork-Accept-Language": "en-US",
+          },
+          credentials: "include",
+        };
+
+        const response = await fetch(url, fetchOptions);
+        const json = await response.json();
+
+        return json;
+      },
+      [imageData]
     );
-    await saveBtn.click();
-    while (!avatarUploaded) {
-      await wait(800);
-    }
+
+    console.log(chalk.green("15. Profile Image Upload"));
     await evaluate(
       upwork.page,
       "https://www.upwork.com/ab/create-profile/api/min/v1/update-pv",
@@ -629,42 +709,100 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
 
   try {
     console.log(chalk.yellow("Additional Configuration"));
-    await upwork.navigate("https://www.upwork.com/nx/agencies/create/");
-    const input = await upwork.page.waitForSelector("#agency-name-input");
-    await upwork.page.type("#agency-name-input", process.env.AGENCY_NAME);
-    await wait(100);
-    const continueBtn = await upwork.page.$x(
-      '//button[contains(text(), "Continue")]'
-    );
-    await continueBtn[0].click();
-    console.log("Continue is clicked");
-    await wait(100);
-    const confirmBtn = await upwork.page.$x(
-      '//button[contains(text(), "Continue with Basic")]'
-    );
-    console.log("Continue with Basic is clicked");
-    await Promise.all([confirmBtn[0].click(), upwork.page.waitForNavigation()]);
-    await upwork.navigate("https://www.upwork.com/nx/ag/settings/", {
-      waitUntil: "networkidle2",
+    // await upwork.navigate('https://www.upwork.com/nx/find-work');
+    let rawToken;
+    upwork.page.on("response", async (response) => {
+      const responseUrl = response.url();
+
+      // Check if the response URL matches your specific URL
+      if (
+        responseUrl.includes(
+          "https://auth.upwork.com/api/v3/oauth2/token/subordinate/v3/"
+        )
+      ) {
+        // Process the response here
+
+        // Optionally, you can work with the response body
+        rawToken = await response.text();
+      }
     });
-    const closeAgBtn = await upwork.page.waitForXPath(
-      '//button[contains(text(), "Close my Agency")]',
-      {
-        visible: true,
-        timeout: 10000, // waits for 10 seconds
-      }
-    );
-    // const modelBtn = await upwork.page.$x('//button[contains(text(), "Confirm")]');
-    await closeAgBtn.click();
-    console.log(`Close AG is clicked`);
-    const modalBtn = await upwork.page.waitForXPath(
-      '//button[contains(text(), "Confirm")]',
-      {
-        visible: true,
-        timeout: 10000, // waits for 5 seconds
-      }
-    );
-    await Promise.all([modalBtn.click(), upwork.page.waitForNavigation()]);
+    await upwork.navigate("https://www.upwork.com/nx/agencies/create/");
+    while (!rawToken) {
+      await wait(100);
+    }
+    const token = await getAGToken(rawToken);
+    const url = "https://www.upwork.com/api/graphql/v1";
+    const headers = {
+      Accept: "*/*",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Accept-Language": "en-US,en;q=0.9",
+      scheme: "https",
+      "Accept-Encoding": "gzip, deflate, br, zstd",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Content-Type": "application/json",
+      Authorization: "bearer " + token,
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
+      "x-odesk-user-agent": "oDesk LM",
+      "x-requested-with": "XMLHttpRequest",
+      "X-Upwork-Accept-Language": "en-US",
+      Referer: "https://www.upwork.com/nx/agencies/create/",
+    };
+    const agCreatedata = {
+      query:
+        "mutation createAgency($name: String!) {\n  createAgency(name: $name) {\n    agencyId\n  }\n}",
+      variables: {
+        name: process.env.AGENCY_NAME,
+      },
+    };
+    const resultAG = await evaluate(upwork.page, url, headers, agCreatedata);
+
+    const agId = resultAG.data.createAgency.agencyId;
+    const agCloseData = {
+      query:
+        "\n      mutation closeAgency($id: ID!) {\n        closeAgency(id: $id)\n      }\n    ",
+      variables: {
+        id: agId,
+      },
+    };
+    await evaluate(upwork.page, GQL_URL, headers, agCloseData);
+
+    // const input = await upwork.page.waitForSelector("#agency-name-input");
+    // await upwork.page.type("#agency-name-input", process.env.AGENCY_NAME);
+    // await wait(100);
+    // const continueBtn = await upwork.page.$x(
+    //   '//button[contains(text(), "Continue")]'
+    // );
+    // await continueBtn[0].click();
+    // console.log("Continue is clicked");
+    // await wait(100);
+    // const confirmBtn = await upwork.page.$x(
+    //   '//button[contains(text(), "Continue with Basic")]'
+    // );
+    // console.log("Continue with Basic is clicked");
+    // await Promise.all([confirmBtn[0].click(), upwork.page.waitForNavigation()]);
+    // await upwork.navigate("https://www.upwork.com/nx/ag/settings/", {
+    //   waitUntil: "networkidle2",
+    // });
+    // const closeAgBtn = await upwork.page.waitForXPath(
+    //   '//button[contains(text(), "Close my Agency")]',
+    //   {
+    //     visible: true,
+    //     timeout: 10000, // waits for 10 seconds
+    //   }
+    // );
+    // // const modelBtn = await upwork.page.$x('//button[contains(text(), "Confirm")]');
+    // await closeAgBtn.click();
+    // console.log(`Close AG is clicked`);
+    // const modalBtn = await upwork.page.waitForXPath(
+    //   '//button[contains(text(), "Confirm")]',
+    //   {
+    //     visible: true,
+    //     timeout: 10000, // waits for 5 seconds
+    //   }
+    // );
+    // await Promise.all([modalBtn.click(), upwork.page.waitForNavigation()]);
     console.log("Hurray!");
     await db.create("accounts", {
       email: inbox.email,
@@ -677,14 +815,15 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     console.log(chalk.green("Premium Account is saved in database"));
   } catch (e) {
     console.log(chalk.red("Error: additional configuration"));
-    // await db.create("accounts", {
-    //   email: inbox.email,
-    //   type: inboxType,
-    //   botName: botName,
-    //   status: "active",
-    //   name: profileName,
-    //   isPremium: false,
-    // });
+    await db.create("accounts", {
+      email: inbox.email,
+      type: inboxType,
+      botName: botName,
+      status: "active",
+      name: profileName,
+      isPremium: false,
+    });
+    console.log(e);
     console.log(chalk.green("Account is saved in database"));
   } finally {
     // await page.close();

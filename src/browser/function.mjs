@@ -43,13 +43,13 @@ export async function evaluate(e, t, a, n) {
   return n
     ? await e.evaluate(
         async (e, t, a) => {
-          e = await fetch(e, {
+          r = await fetch(e, {
             method: "POST",
             headers: t,
             credentials: "include",
             body: JSON.stringify(a),
           });
-          return e.ok ? await e.json() : null;
+          return r.ok ? await r.json() : null;
         },
         t,
         a,
@@ -57,8 +57,8 @@ export async function evaluate(e, t, a, n) {
       )
     : await e.evaluate(
         async (e, t) => {
-          e = await fetch(e, { headers: t, credentials: "include" });
-          return e.ok ? await e.json() : null;
+          r = await fetch(e, { headers: t, credentials: "include" });
+          return r.ok ? await r.json() : null;
         },
         t,
         a
