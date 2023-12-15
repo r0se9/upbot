@@ -539,7 +539,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
         const fileObject = new File([blob], "profile.jpg", {
           type: "image/png",
         });
-        const cropCoord = { x: 13, y: 0, width: 250, height: 250 };
+        const cropCoord = { x: 0, y: 0, width: 250, height: 250 };
         const cropCoordString = cropCoord;
 
         const formData = new FormData();
