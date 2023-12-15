@@ -4,10 +4,12 @@ import dotenv from 'dotenv';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import chalk from 'chalk';
+import fs from 'fs';
 import moment from 'moment-timezone';
 import { decorate } from '../utils/decorator.mjs'
 import Browser from '../browser/index.mjs';
 import Database from '../db/mongodb.mjs';
+import GMail from '../utils/gmail.mjs';
 import { getPrompt } from '../gpt/prompt.config.mjs';
 import GPT from '../gpt/index.mjs';
 import { wait } from '../utils/time.mjs';
@@ -112,8 +114,11 @@ async function checkOne(user, DEBUG){
 	const isRestricted = await checkRestrict(agent);
 	const hasMessage = await checkRooms(agent);
 	if(isRestricted && !hasMessage){
-		console.log(chalk.red('Delete ' + user));
+		console.log(chalk.red('Delete: ' + user));
 		await database.delete('accounts', { email: user });
+	}else(hasMessage){
+		console.log(chalk.green('Message: ' + user));
+		//send Mail;
 	}
 	await agent.close();
 

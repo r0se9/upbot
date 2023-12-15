@@ -16,15 +16,7 @@ export default class GeneratorMail {
   }
   static create() {
     const name = "w";
-    const domains = [
-"khuonghung.com",
-"fusion-gourmet.com",
-"portugaldeformalegal.com",
-"claudiaebacher.com",
-"brightsitetrends.com",
-"friendlynewswire.com",
-"ghost-mailer.com"
-    ];
+    const domains = process.env.GENDOMAINS.split(',');
     return generateText(name) + "@" + getRandomElement(domains);
   }
   async getInbox() {
