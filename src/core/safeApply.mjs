@@ -2,7 +2,7 @@
 import chalk from 'chalk';
 import moment from 'moment-timezone';
 import Browser from '../browser/index.mjs';
-import { getPrompt } from '../gpt/prompt.config.mjs';
+// import { getPrompt } from '../gpt/prompt.config.mjs';
 import _ from 'lodash';
 import { wait } from '../utils/time.mjs';
 import { updateProgress } from '../utils/decorator.mjs';
@@ -82,7 +82,7 @@ async function apply(agent, job, gpt, MODE, USEGPT){
 					const start = moment();
 					let result;
 					if(USEGPT){
-						result = await gpt.prompt(getPrompt(job.description));
+						result = await gpt.prompt(job.description);
 						console.log(chalk.green(`GPT is created in ${moment().diff(start)/1000}s`));
 					}else{
 						result = await gpt.default;
@@ -202,7 +202,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 
 		do {
 			const jobs = await getJobs(agent);
-			const saved = await database.get('applied', {uid: {'$in':jobs.map(el=>el.uid)}});
+			const saved = await database.get('applied', {uid: {'$in':jobs.map(el=>el.uid)}, name: USER});
 			filteredJobs = filterJobs(jobs, saved.map(el=>el.uid));
 			if(filteredJobs.length===0){
 				await wait(5 * 1000);
