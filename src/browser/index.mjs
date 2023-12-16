@@ -86,6 +86,13 @@ export default class Browser{
       this.page = pages[0];
 
   }
+  async disconnect(){
+    this.browser.disconnect();
+  }
+  async getPage(index){
+    const pages = await this.browser.pages();
+    return pages[index]
+  }
   async login({user, password}, startUrl = this.AUTH_URL){
     console.log('Login...')
       const options = {
