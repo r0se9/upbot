@@ -58,6 +58,12 @@ const argv = yargs(hideBin(process.argv))
     type: "string",
     demandOption: true,
   })
+  .option("premium", {
+    alias: "p",
+    description: "Create Premium version",
+    type: "boolean",
+    default: false,
+  })
   .help()
   .alias("help", "h").argv;
 
@@ -706,7 +712,18 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     await upwork.close();
     return false;
   }
-
+  if(!argv.premium){
+    await db.create("accounts", {
+      email: inbox.email,
+      type: inboxType,
+      botName: botName,
+      status: "active",
+      name: profileName,
+      isPremium: false,
+    });
+    await upwork.close();
+    return true;
+  }
   try {
     console.log(chalk.yellow("Additional Configuration"));
     // await upwork.navigate('https://www.upwork.com/nx/find-work');

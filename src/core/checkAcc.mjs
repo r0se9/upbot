@@ -5,12 +5,12 @@ import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
 import chalk from 'chalk';
 import fs from 'fs';
+import path from 'path'
 import moment from 'moment-timezone';
 import { decorate } from '../utils/decorator.mjs'
 import Browser from '../browser/index.mjs';
 import Database from '../db/mongodb.mjs';
 import GMail from '../utils/gmail.mjs';
-import { getPrompt } from '../gpt/prompt.config.mjs';
 import GPT from '../gpt/index.mjs';
 import { wait } from '../utils/time.mjs';
 dotenv.config()
@@ -26,6 +26,8 @@ const argv = yargs(hideBin(process.argv))
   .alias('help', 'h')
   .argv;
 
+const credential = fs.readFileSync(path.resolve('static/credentials/token.json'));
+const gmail = new GMail(JSON.parse(credential));
 
 
 const DEBUG = (argv.debug && argv.debug === true) ? true : false;
@@ -65,7 +67,7 @@ async function request(page, method, url, headers, data) {
 const database = new Database(process.env.MONBO_URI)
 await database.connect();
 async function getAccounts() {
-	const accounts = await database.get('accounts', { status: 'applied', botName: process.env.BOT});
+	const accounts = await database.get('accounts', { status: {'$in':['applied', 'opened']}, botName: process.env.BOT});
 	return accounts;
 }
 async function createAgent(user, DEBUG){
@@ -116,8 +118,13 @@ async function checkOne(user, DEBUG){
 	if(isRestricted && !hasMessage){
 		console.log(chalk.red('Delete: ' + user));
 		await database.delete('accounts', { email: user });
-	}else(hasMessage){
+	}else if(hasMessage){
 		console.log(chalk.green('Message: ' + user));
+		await gmail.sendMail({
+			to: process.env.EMAIL_NOTIFICATION,
+			subject: 'Good news! ' + user,
+			message: 'process.env.EMAIL_NOTIFICATION',
+		})
 		//send Mail;
 	}
 	await agent.close();
@@ -130,3 +137,4 @@ async function main(){
 	}
 }
 await main();
+await database.close();
