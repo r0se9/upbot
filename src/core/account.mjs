@@ -827,6 +827,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       botName: botName,
       status: "active",
       name: profileName,
+      isActive: true,
       isPremium: true,
     });
     console.log(chalk.green("Premium Account is saved in database"));
@@ -838,6 +839,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       botName: botName,
       status: "active",
       name: profileName,
+      isActive: true,
       isPremium: false,
     });
     console.log(e);

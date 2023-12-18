@@ -61,6 +61,7 @@ function filterJobs(jobs, exclude){
 		let score = 0;
 		if(exclude.includes(job.uid)) return false;
 		if(job.category.category.prefLabel === 'Web, Mobile & Software Dev') return false;
+		if(job.category.subcategories.prefLabel === 'Data Entry & Transcription Services') return false;
 		if(job.client.location.country && BANNED_COUNTRIES.includes(job.client.location.country)) score--;
 		if(job.isFixed){
 			if(job.budget < process.env.FIXED_LIMIT) score --;
@@ -176,7 +177,7 @@ async function checkRestrict(agent){
 async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 
 	while(true){
-		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER }, { sort: {createdAt: -1}});
+		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
 			await wait(100 * 1000);
