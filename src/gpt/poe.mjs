@@ -29,16 +29,16 @@ export default class Poe{
     		const page = await this.browser.getPage(0)
     		const input = await page.$(input_textarea_selector);
 
-    		await input.click({ clickCount: 3 }); // Select all the existing text
-    		await page.keyboard.press('Backspace'); // Clear the textarea
-
-    		const lines = template.split("\n");
-    		for (const line of lines) {
-     			await page.type(input_textarea_selector, line); // Type out the line
-      			await page.keyboard.down('Shift');
+    		await page.evaluate((selector, text)=>{
+    			const inp = document.querySelector(selector);
+    			inp.value = text;
+    		}, input_textarea_selector, template)
+    		// await input.click({ clickCount: 3 }); // Select all the existing text
+    		// await page.keyboard.press('Backspace'); // Clear the textarea
+    		await page.keyboard.down('Shift');
      			await page.keyboard.press('Enter'); // Line break without submitting
       			await page.keyboard.up('Shift');
-    		}
+    		
 
     		console.log("[Info]: Bid Template Sent!");
 
