@@ -67,7 +67,7 @@ async function request(page, method, url, headers, data) {
 const database = new Database(process.env.MONBO_URI)
 await database.connect();
 async function getAccounts() {
-	const accounts = await database.get('accounts', { status: {'$in':['applied', 'opened'], isActive: {'$in': false}}, botName: process.env.BOT});
+	const accounts = await database.get('accounts', { status: {'$in':['applied', 'opened'], isActive: {'$ne': false}}, botName: process.env.BOT});
 	return accounts;
 }
 async function createAgent(user, DEBUG){
