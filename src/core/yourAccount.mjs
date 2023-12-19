@@ -16,7 +16,7 @@ import FakeMail from '../inbox/fakemail.mjs';
 import TenMail from '../inbox/tenmail.mjs';
 import { evaluate, readFileAsync } from "../browser/function.mjs";
 import { wait } from "../utils/time.mjs";
-import { getRandomElement } from '../utils/lib.mjs';
+import { getRandomElement, imageToBase64 } from '../utils/lib.mjs';
 decorate();
 const PROFILE_PATH = "./static/profiles";
 const AVAILABLE_INBOXes = ["nospammail", "genmail", "tenmail", "fakemail", "dispmail", "random"];
