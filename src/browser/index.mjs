@@ -376,7 +376,7 @@ export default class Browser{
           "X-Upwork-Accept-Language": "en-US",
         };
         const response = await request(this.page, "GET", url, headers);
-        return response.data.searchResults.jobs;
+        return response?.data?.searchResults?.jobs || [];
   }
   async getJobOpening(id){
     const headers = {
