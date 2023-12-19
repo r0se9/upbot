@@ -132,7 +132,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 			if(opening.flSuspended){
 				console.log(chalk.red('>>>> Account is restricted'));
 				console.log(`delete account with ${email}`)
-				await database.delete('accounts', { email: email })
+				await database.update('accounts', { email }, {'$set': {status: 'restricted'}});
 			}else if(opening.opening.job.info.isPtcPrivate){
 				console.log(chalk.red('>>>> Job is private only'))
 				await database.create('applied', {uid: job.uid, status: 'private'});
@@ -156,7 +156,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultServerError_ErrorMessage'){
 			
 				console.log(chalk.red('Server is temporarily down. Try again in a while.'))
-				await database.delete('accounts', { email: email })
+				await database.update('accounts', { email }, {'$set': {status: 'restricted'}});
 		}
 		 else{
 			console.log(result.data);
@@ -188,7 +188,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 		const isRestricted = await checkRestrict(agent);
 		if(isRestricted){
 			console.log(chalk.red('This has been restricted.'))
-			await database.delete('accounts', { email });
+			await database.update('accounts', { email }, {'$set': {status: 'restricted'}});
 			await agent.close();
 			continue;
 		}
