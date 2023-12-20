@@ -40,7 +40,7 @@ async function getJobs(agent){
 	
 	const jobs = result.map(el=>{
 		const publishedOn = moment(el.renewedOn ? el.renewedOn : el.publishedOn).tz('UTC');
-	const result = {uid: el.uid,  client: el.client, title: el.title, description: el.description,  postedAt: publishedOn.toDate(), link: `https://www.upwork.com/ab/proposals/job/${el.ciphertext}/apply/`, category: el.occupations };
+	const result = {uid: el.uid,  client: el.client, title: el.title, description: el.description,  postedAt: publishedOn.toDate(), link: `https://www.upwork.com/ab/proposals/job/${el.ciphertext}/apply/`, ciphertext: el.ciphertext, category: el.occupations };
 	const isFixed = el.amount.amount ? true: false;
 	result.isFixed = isFixed;
 	if(isFixed){
@@ -91,14 +91,25 @@ async function apply(agent, job, gpt, MODE, USEGPT){
 					return result;
 				})(),
 		(async ()=>{
-			await agent.navigate(job.link, { waitUntil: "networkidle0" });
+			await agent.navigate(job.link, { waitUntil: "networkidle2" });
 			await agent.getAuth();
+			
 			const result = await agent.getJobOpening(job.uid);
-			return {engagementDuration: result.opening.job.engagementDuration, questions: result.questions.questions};
+			return {engagementDuration: result.opening.job.engagementDuration, questions: result.questions.questions };
 		})()
 		]);
+	const reqConnects = await agent.getJobConnects(job.ciphertext);
+			console.log(`1. Job needs ${reqConnects} connects`);
+			const bids = await agent.getJobBids(job.uid);
+			const connects = bids.map(el=>el.amount);
+			console.log(connects);
+			let amount = 50;
+			if(connects.length===4 && connects[connects.length - 1] + reqConnects === 50){
+				console.log('Cannot boost!')
+				amount = reqConnects;
+			}
 	const result = await agent.applyJob(job.uid, {
-			connects: (MODE === 'speed') ? 50: 30,
+			connects: amount,
 			link: job.link,
 			coverLetter,
 			questions: questions.map(el=>({...el, answer: gpt.getAnswer(el.question)})),
@@ -125,14 +136,14 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 			]);
 	} else {
 		console.log(chalk.red('============ Application Failed ==========='));
-		
+		console.log(result.data.error);
 		if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultForbidden_ErrorMessage'){
 			// In this case, job is transferred to private, you cannot bid to that.....
 			const opening = await agent.getJobOpening(job.uid)
 			if(opening.flSuspended){
 				console.log(chalk.red('>>>> Account is restricted'));
 				console.log(`delete account with ${email}`)
-				await database.update('accounts', { email }, {'$set': {status: 'restricted'}});
+				await database.update('accounts', { email }, {'$set': {status: 'forbidden'}});
 			}else if(opening.opening.job.info.isPtcPrivate){
 				console.log(chalk.red('>>>> Job is private only'))
 				await database.create('applied', {uid: job.uid, status: 'private'});
@@ -156,7 +167,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultServerError_ErrorMessage'){
 			
 				console.log(chalk.red('Server is temporarily down. Try again in a while.'))
-				await database.update('accounts', { email }, {'$set': {status: 'restricted'}});
+				await database.update('accounts', { email }, {'$set': {status: 'temporarily'}});
 		}
 		 else{
 			console.log(result.data);

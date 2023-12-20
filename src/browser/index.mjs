@@ -279,9 +279,10 @@ export default class Browser{
     const headers = {
           "Accept": "*/*",
           "scheme": "https",
+          "Content-Type": "application/json",
           "Accept-Encoding": "gzip, deflate, br, zstd",
           "Accept-Language": "en-US,en;q=0.9",
-          "Authorization": "bearer " + this.AUTH["boostToken"],
+          "Authorization": "bearer " + this.AUTH["fwToken"],
           "Sec-Fetch-Dest": "empty",
           "Sec-Fetch-Mode": "cors",
           "Sec-Fetch-Site": "same-origin",
@@ -289,8 +290,8 @@ export default class Browser{
           "x-requested-with": "XMLHttpRequest",
           "X-Upwork-Accept-Language": "en-US"
         };
-        const response = await request(this.page, url, headers, data);
-        return response;
+        const response = await graphql(this.page, url, headers, data);
+        return response?.data?.data?.organization?.subscriptionPlan?.connectsBalance || 0;
   }
   async navigate(link, option={}){
     await this.page.goto(link, option);
@@ -311,7 +312,38 @@ export default class Browser{
       const res = await request(this.page, "GET", "https://www.upwork.com/ab/proposals/api/v4/job/details/" + link, headers);
       return res;
   }
-
+  async getJobConnects(link){
+    const headers = {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          Authorization: "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+      };
+      const res = await request(this.page, "GET", ` https://www.upwork.com/job-details/jobdetails/api/job/${link}/connects`, headers);
+      return res?.data?.requiredConnects;    
+  }
+  async getJobBids(id){
+    const headers = {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          Authorization: "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+      };
+      const res = await request(this.page, "GET", `https://www.upwork.com/ab/proposals/api/v4/application/bids?jobUid=` + id, headers);
+      return res?.data?.bids || [];
+  }
   async getJobs(){
     const headers = {
           "Accept": "application/json, text/plain, */*",
