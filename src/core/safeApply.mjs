@@ -91,7 +91,7 @@ async function apply(agent, job, gpt, MODE, USEGPT){
 					return result;
 				})(),
 		(async ()=>{
-			await agent.navigate(job.link, { waitUntil: "networkidle2" });
+			await agent.navigate(job.link, { waitUntil: "networkidle0" });
 			await agent.getAuth();
 			
 			const result = await agent.getJobOpening(job.uid);
