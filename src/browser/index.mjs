@@ -130,9 +130,18 @@ export default class Browser{
     });
       await this.page.setDefaultNavigationTimeout(100000);
       await this.page.goto(startUrl, { waitUntil: 'networkidle0' });
+      const title = await this.page.title();
+      
+
+      // If the title includes "Access Denied", refresh the page
+      if (title.includes('Access denied')) {
+        console.log('Access Denied detected in the title, refreshing the page...');
+        await this.page.reload();
+      }
       console.log('========= Rendered Page ==========')
       // TIMER
       await input(this.page, '#login_username', user);
+      await wait(1500);
       await click({
         component: this.page,
         selector: '#login_password_continue'

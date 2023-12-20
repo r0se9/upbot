@@ -77,6 +77,7 @@ function filterJobs(jobs, exclude){
 async function apply(agent, job, gpt, MODE, USEGPT){
 
 	console.log('=====' + job.title + '=====')
+	console.log('Job was posted ' + moment().diff(job.postedAt)/1000 + 's before')
 	const start = moment();
 	const [coverLetter, {engagementDuration, questions }] = await Promise.all([
 		(async ()=>{
@@ -106,7 +107,7 @@ async function apply(agent, job, gpt, MODE, USEGPT){
 			let amount = 50;
 			if(connects.length===4 && connects[connects.length - 1] + reqConnects === 50){
 				console.log('Cannot boost!')
-				amount = reqConnects;
+				amount = null;
 			}
 	const result = await agent.applyJob(job.uid, {
 			connects: amount,
