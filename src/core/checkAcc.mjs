@@ -67,7 +67,7 @@ async function request(page, method, url, headers, data) {
 const database = new Database(process.env.MONBO_URI)
 await database.connect();
 async function getAccounts() {
-	const accounts = await database.get('accounts', { status: {'$in':['applied', 'opened'], isActive: {'$ne': false}}, botName: process.env.BOT});
+	const accounts = await database.get('accounts', { status: {'$in':['applied', 'opened']}, isActive: {'$ne': false}, botName: process.env.BOT});
 	return accounts;
 }
 async function createAgent(user, DEBUG){
@@ -117,7 +117,7 @@ async function checkOne(user, DEBUG){
 	const hasMessage = await checkRooms(agent);
 	if(isRestricted && !hasMessage){
 		console.log(chalk.red('Delete: ' + user));
-		await database.update('accounts', { email: user }, {'$set': {status: 'restricted'}});
+		await database.delete('accounts', { email: user });
 	}else if(hasMessage){
 		console.log(chalk.green('Message: ' + user));
 		await gmail.sendMail({
