@@ -495,13 +495,13 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     });
     console.log(chalk.green("13. Add Address and Phone number"));
     // Address and Phone
-    const { city, state } = await getLocation(
-      upwork.page,
-      location.city,
-      location.countryCode,
-      AUTH
-    );
-
+    // const { city, state } = await getLocation(
+    //   upwork.page,
+    //   location.city,
+    //   location.countryCode,
+    //   AUTH
+    // );
+    const { city, state } = location;
     console.log(chalk.green("14. Add Location"));
     await evaluate(
       upwork.page,

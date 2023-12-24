@@ -200,7 +200,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 		const isRestricted = await checkRestrict(agent);
 		if(isRestricted){
 			console.log(chalk.red('This has been restricted.'))
-			await database.update('accounts', { email }, {'$set': {status: 'restricted'}});
+			await database.delete('accounts', { email });
 			await agent.close();
 			continue;
 		}

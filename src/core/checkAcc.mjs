@@ -133,7 +133,13 @@ async function checkOne(user, DEBUG){
 async function main(){
 	const users = await getAccounts();
 	for(let user of users.map(el=>el.email)){
-		await checkOne(user, DEBUG);
+		try{
+			console.log('Check: '+ user)
+			await checkOne(user, DEBUG);
+		} catch(e){
+			console.log(chalk.red('error' + user))
+		}
+		
 	}
 }
 await main();
