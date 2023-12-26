@@ -66,7 +66,7 @@ const argv = yargs(hideBin(process.argv))
   })
   .help()
   .alias("help", "h").argv;
-
+const LANGUAGE_LEVEL = ['basl', 'conl', 'flul', 'natl'];
 function generatePhoneNumber(base) {
   return base.replace(/\*/g, () => Math.floor(Math.random() * 10));
 }
@@ -411,16 +411,15 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       query:
         "mutation updateTalentLanguageRecords($records: [TalentLanguageInput!]){ \x0a  updateTalentLanguageRecords(records: $records){\x0a    id\x0a  }}",
       variables: {
-        records: [
-          {
+        records: profile['languages'].map(el=>({
             language: {
-              iso639Code: "en",
+              iso639Code: el.code,
               active: true,
-              englishName: "English",
-            },
-            proficiencyLevel: { code: "flul" },
-          },
-        ],
+              englishName: el.name
+            }, proficiencyLevel: {
+              code: LANGUAGE_LEVEL[el.level] 
+            }
+          }))
       },
     });
     console.log(chalk.green("8. Add Language"));
