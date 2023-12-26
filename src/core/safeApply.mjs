@@ -150,7 +150,10 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 				await database.create('applied', {uid: job.uid, status: 'private', name: USER});
 			}
 			
-		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_ThisJobIsNoLongerAvailable'){
+		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJ_JA_8'){
+			console.log(chalk.red('>>>> Job is no longer Available.'));
+			await database.delete('applied', { email });
+		}else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_ThisJobIsNoLongerAvailable'){
 
 			console.log(chalk.red('>>>> Job is no longer Available.'));
 			await database.create('applied', {uid: job.uid, status: 'no longer avaialble', name: USER});
