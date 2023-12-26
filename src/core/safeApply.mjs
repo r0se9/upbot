@@ -147,18 +147,18 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 				await database.update('accounts', { email }, {'$set': {status: 'forbidden'}});
 			}else if(opening.opening.job.info.isPtcPrivate){
 				console.log(chalk.red('>>>> Job is private only'))
-				await database.create('applied', {uid: job.uid, status: 'private'});
+				await database.create('applied', {uid: job.uid, status: 'private', name: USER});
 			}
 			
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_ThisJobIsNoLongerAvailable'){
 
 			console.log(chalk.red('>>>> Job is no longer Available.'));
-			await database.create('applied', {uid: job.uid, status: 'no longer avaialble'});
+			await database.create('applied', {uid: job.uid, status: 'no longer avaialble', name: USER});
 
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJF_JA_2'){
 
 			console.log(chalk.red('>>>> Job is no longer Available.'));
-			await database.create('applied', {uid: job.uid, status: 'no longer avaialble'});
+			await database.create('applied', {uid: job.uid, status: 'no longer avaialble', name: USER});
 
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJF_CONN_1'){
 
