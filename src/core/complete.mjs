@@ -45,8 +45,14 @@ const argv = yargs(hideBin(process.argv))
     demandOption: true,
   })
   .option("email", {
-    alias: "f",
+    alias: "e",
     description: "Enter your profile email address",
+    type: "string",
+    demandOption: true,
+  })
+  .option("password", {
+    alias: "s",
+    description: "Enter your profile password",
     type: "string",
     demandOption: true,
   })
@@ -241,7 +247,7 @@ async function getLocation(page, city, countryCode, AUTH) {
     };
 }
 
-async function createAccount(profile, email) {
+async function createAccount(profile, email, db) {
   const locations = await db.get("locations", { country: profile["country"] });
   const location = getRandomElement(locations);
   // console.log(location);
@@ -249,10 +255,11 @@ async function createAccount(profile, email) {
   const pathToExtension = path.resolve("./static/extensions/cookies");
   const upwork = new Browser(!argv.debug);
   try {
+    
     await upwork.login(
       {
-        user: inbox.email,
-        password: process.env.PASSWORD,
+        user: email,
+        password: argv.password || process.env.PASSWORD,
       }
     );
 
@@ -810,10 +817,14 @@ async function main() {
   const filePath = path.resolve(PROFILE_PATH, argv.file + ".json");
   const rawData = await readFileAsync(filePath);
   const profile = JSON.parse(rawData);
+  const database = new Database(process.env.MONBO_URI);
+  await database.connect();
   await createAccount(
         profile,
         argv.email,
+        database
       );
+  await database.close();
 }
 
 await main();
