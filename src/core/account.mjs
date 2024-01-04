@@ -58,6 +58,11 @@ const argv = yargs(hideBin(process.argv))
     type: "string",
     demandOption: true,
   })
+  .option("bot", {
+    alias: "b",
+    description: "Enter your bot name",
+    type: "string",
+  })
   .option("premium", {
     alias: "p",
     description: "Create Premium version",
@@ -122,20 +127,11 @@ async function getAuthData(page) {
   return data;
 }
 async function getAGToken(page) {
-  // const subClientId = await page.evaluate(()=>{
-  //   return window.NUXT_APP_CONFIG.subordinateClientId;
-  // })
-  // const token = await page.evaluate(async(url)=>{
-  //   const response = await fetch(url, { credentials: 'include' });
-  //   return response.text();
-  // }, ['https://auth.upwork.com/api/v3/oauth2/token/subordinate/v3/' + subClientId])
   const tokenRegex = /token":\s*"([^"]+)"/;
-
   // Execute the regular expression to find the token
   const match = tokenRegex.exec(page);
 
   if (match && match[1]) {
-    // Output the extracted token
     console.log("Extracted Token:", match[1]);
   } else {
     console.log("No token found!");
@@ -884,7 +880,7 @@ async function main() {
         profile,
         argv.mail,
         argv.file,
-        process.env.BOT,
+        argv.bot || process.env.BOT,
         database
       );
     } catch (e) {
