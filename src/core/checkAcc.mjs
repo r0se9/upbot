@@ -117,6 +117,7 @@ async function checkOne(user, DEBUG){
 	const hasMessage = await checkRooms(agent);
 	if(isRestricted && !hasMessage){
 		console.log(chalk.red('Delete: ' + user));
+		await agent.closeAccount();
 		await database.delete('accounts', { email: user });
 	}else if(hasMessage){
 		console.log(chalk.green('Message: ' + user));

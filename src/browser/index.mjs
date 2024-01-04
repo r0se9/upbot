@@ -546,4 +546,21 @@ export default class Browser{
     const result = await request(this.page, "POST", url, headers, data);
     return result;
   }
+  async closeAccount(){
+    const headers = {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          Authorization: "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-csrf-token": this.AUTH["token"],
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+      };
+      const res = await request(this.page, "POST", "https://www.upwork.com/freelancers/settings/api/v1/deactivate-account" , headers, {"reason": "191"});
+      return res;
+  }
 }
