@@ -39,7 +39,7 @@ const mode = argv.mode;
 const DEBUG = (argv.debug && argv.debug === true) ? true : false;
 
 
-const database = new Database(process.env.MONBO_URI)
+const database = new Database(process.env.MONGODB_URI)
 await database.connect();
 const gpt = new GPT(process.env.OPENAI_KEY, process.env.GPT_MODEL)
 

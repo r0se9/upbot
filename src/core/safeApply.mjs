@@ -34,13 +34,18 @@ async function getLastAppliedJobs(){
 }
 async function getJobs(agent){
 	const results = await Promise.all([agent.getJobs(), agent.searchJobs()]);
-	const result = _.map(results[1], (item)=>{
-		return _.merge({}, item, _.find(results[0], ['uid', item.uid]))
+	const result = results[0];
+	_.forEach(results[1], item=>{
+		if(!_.find(result, ['uid', item.uid])){
+			result.push(item);
+		}
 	})
+	
+
 	
 	const jobs = result.map(el=>{
 		const publishedOn = moment(el.renewedOn ? el.renewedOn : el.publishedOn).tz('UTC');
-	const result = {uid: el.uid,  client: el.client, title: el.title, description: el.description,  postedAt: publishedOn.toDate(), link: `https://www.upwork.com/ab/proposals/job/${el.ciphertext}/apply/`, ciphertext: el.ciphertext, category: el.occupations };
+	const result = {uid: el.uid, type: el.hourlyBudget.type,  client: el.client, title: el.title, description: el.description,  postedAt: publishedOn.toDate(), link: `https://www.upwork.com/ab/proposals/job/${el.ciphertext}/apply/`, ciphertext: el.ciphertext, category: el.occupations };
 	const isFixed = el.amount.amount ? true: false;
 	result.isFixed = isFixed;
 	if(isFixed){

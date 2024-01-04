@@ -64,7 +64,7 @@ async function request(page, method, url, headers, data) {
       );
 }
 
-const database = new Database(process.env.MONBO_URI)
+const database = new Database(process.env.MONGODB_URI)
 await database.connect();
 async function getAccounts() {
 	const accounts = await database.get('accounts', { status: {'$in':['active']}, isActive: {'$ne': false}, botName: process.env.BOT});

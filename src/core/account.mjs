@@ -874,7 +874,7 @@ async function main() {
   const filePath = path.resolve(PROFILE_PATH, argv.file + ".json");
   const rawData = await readFileAsync(filePath);
   const profile = JSON.parse(rawData);
-  const database = new Database(process.env.MONBO_URI);
+  const database = new Database(process.env.MONGODB_URI);
   await database.connect();
   // console.log(argv.num,argv.mail, process.env.BOT)
   for (let index = 0; index < argv.num; index++) {

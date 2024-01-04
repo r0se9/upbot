@@ -175,6 +175,7 @@ export default class GeneratorMail {
       }
       return messages;
     } catch (e) {
+      console.log(e)
       console.error("[ERR] Timeout");
       return [];
     }

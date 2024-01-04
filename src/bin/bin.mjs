@@ -62,7 +62,7 @@ ${e}
 `);
 gpt.setKnowledgeBase([
 	]);
-const database = new Database(process.env.MONBO_URI);
+const database = new Database(process.env.MONGODB_URI);
 await database.connect();
 await main(gpt, database, USER, MODE, DEBUG, USEGPT);
 if(USEPOE){
