@@ -38,30 +38,23 @@ const argv = yargs(hideBin(process.argv))
     type: "boolean",
     default: false,
   })
-  .option("mail", {
-    alias: "m",
-    description: "Enter your inbox type",
-    type: "string",
-    demandOption: true,
-    choices: AVAILABLE_INBOXes,
-  })
-  .option("num", {
-    alias: "n",
-    description: "Enter the amount of accounts to create",
-    type: "number",
-    demandOption: true,
-    default: 1,
-  })
   .option("file", {
     alias: "f",
     description: "Enter your profile filename",
     type: "string",
     demandOption: true,
   })
-  .option("bot", {
-    alias: "b",
-    description: "Enter your bot name",
+  .option("email", {
+    alias: "e",
+    description: "Enter your profile email address",
     type: "string",
+    demandOption: true,
+  })
+  .option("password", {
+    alias: "s",
+    description: "Enter your profile password",
+    type: "string",
+    demandOption: true,
   })
   .option("premium", {
     alias: "p",
@@ -127,11 +120,20 @@ async function getAuthData(page) {
   return data;
 }
 async function getAGToken(page) {
+  // const subClientId = await page.evaluate(()=>{
+  //   return window.NUXT_APP_CONFIG.subordinateClientId;
+  // })
+  // const token = await page.evaluate(async(url)=>{
+  //   const response = await fetch(url, { credentials: 'include' });
+  //   return response.text();
+  // }, ['https://auth.upwork.com/api/v3/oauth2/token/subordinate/v3/' + subClientId])
   const tokenRegex = /token":\s*"([^"]+)"/;
+
   // Execute the regular expression to find the token
   const match = tokenRegex.exec(page);
 
   if (match && match[1]) {
+    // Output the extracted token
     console.log("Extracted Token:", match[1]);
   } else {
     console.log("No token found!");
@@ -245,50 +247,21 @@ async function getLocation(page, city, countryCode, AUTH) {
     };
 }
 
-async function createAccount(profile, inboxType, profileName, botName, db) {
+async function createAccount(profile, email, db) {
   const locations = await db.get("locations", { country: profile["country"] });
   const location = getRandomElement(locations);
   // console.log(location);
-  let inbox;
-  if (inboxType === "nospammail") {
-    inbox = new NoSpamMail(await NoSpamMail.create());
-  } else if (inboxType === "genmail") {
-    inbox = new GenMail(await GenMail.create());
-  } else if (inboxType === "tenmail") {
-    inbox = new TenMail(await TenMail.create());
-  } else if (inboxType === "fakemail") {
-    inbox = new FakeMail(await FakeMail.create());
-  } else if (inboxType === "dispmail") {
-    inbox = new DisposableMail(await DisposableMail.create());
-  } else if (inboxType === "gmail") {
-    inbox = new Gmail(Gmail.create(process.env.GMAIL));
-  } else if (inboxType === "random") {
-    const MAIL = getRandomElement([
-      NoSpamMail,
-      GenMail,
-      TenMail,
-      FakeMail,
-      DisposableMail,
-    ]);
-    inbox = new MAIL(await MAIL.create());
-  }
-  console.log(`===> ${inbox.email}`);
+  
   const pathToExtension = path.resolve("./static/extensions/cookies");
   const upwork = new Browser(!argv.debug);
   try {
-    await upwork.signUp(
+    
+    await upwork.login(
       {
-        user: inbox.email,
-        password: process.env.PASSWORD,
-      },
-      { firstName: profile["firstName"], secondName: profile["lastName"] },
-      inbox,
-      [
-        `--disable-extensions-except=${pathToExtension}`,
-        `--load-extension=${pathToExtension}`,
-      ]
+        user: email,
+        password: argv.password || process.env.PASSWORD,
+      }
     );
-    console.log("Successfully Verified.");
 
     await upwork.navigate("https://www.upwork.com/nx/create-profile/", {
       waitUntil: "networkidle0",
@@ -727,14 +700,6 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     return false;
   }
   if(!argv.premium){
-    await db.create("accounts", {
-      email: inbox.email,
-      type: inboxType,
-      botName: botName,
-      status: "active",
-      name: profileName,
-      isPremium: false,
-    });
     await upwork.close();
     return true;
   }
@@ -835,27 +800,9 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     // );
     // await Promise.all([modalBtn.click(), upwork.page.waitForNavigation()]);
     console.log("Hurray!");
-    await db.create("accounts", {
-      email: inbox.email,
-      type: inboxType,
-      botName: botName,
-      status: "active",
-      name: profileName,
-      isActive: true,
-      isPremium: true,
-    });
     console.log(chalk.green("Premium Account is saved in database"));
   } catch (e) {
     console.log(chalk.red("Error: additional configuration"));
-    await db.create("accounts", {
-      email: inbox.email,
-      type: inboxType,
-      botName: botName,
-      status: "active",
-      name: profileName,
-      isActive: true,
-      isPremium: false,
-    });
     console.log(e);
     console.log(chalk.green("Account is saved in database"));
   } finally {
@@ -872,22 +819,11 @@ async function main() {
   const profile = JSON.parse(rawData);
   const database = new Database(process.env.MONGODB_URI);
   await database.connect();
-  // console.log(argv.num,argv.mail, process.env.BOT)
-  for (let index = 0; index < argv.num; index++) {
-    console.log(`~~~~~~ ${index + 1} ~~~~~~~`);
-    try {
-      await createAccount(
+  await createAccount(
         profile,
-        argv.mail,
-        argv.file,
-        argv.bot || process.env.BOT,
+        argv.email,
         database
       );
-    } catch (e) {
-      console.log(chalk.red("Error"));
-      console.log(e);
-    }
-  }
   await database.close();
 }
 

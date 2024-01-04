@@ -20,9 +20,9 @@ const argv = yargs(hideBin(process.argv))
   .alias('help', 'h')
   .argv;
 const upwork = new Browser();
-const database = new Database(process.env.MONBO_URI)
+const database = new Database(process.env.MONGODB_URI)
 await database.connect();
-await upwork.connectRemote(8080);
+await upwork.connectRemote(8081);
 await upwork.navigate('https://www.upwork.com/nx/find-work/domestic')
 console.log(chalk.green('Remote Connected'))
 

@@ -86,6 +86,13 @@ export default class Browser{
       this.page = pages[0];
 
   }
+  async disconnect(){
+    this.browser.disconnect();
+  }
+  async getPage(index){
+    const pages = await this.browser.pages();
+    return pages[index]
+  }
   async login({user, password}, startUrl = this.AUTH_URL){
     console.log('Login...')
       const options = {
@@ -123,9 +130,18 @@ export default class Browser{
     });
       await this.page.setDefaultNavigationTimeout(100000);
       await this.page.goto(startUrl, { waitUntil: 'networkidle0' });
+      const title = await this.page.title();
+      
+
+      // If the title includes "Access Denied", refresh the page
+      if (title.includes('Access denied')) {
+        console.log('Access Denied detected in the title, refreshing the page...');
+        await this.page.reload();
+      }
       console.log('========= Rendered Page ==========')
       // TIMER
       await input(this.page, '#login_username', user);
+      await wait(1500);
       await click({
         component: this.page,
         selector: '#login_password_continue'
@@ -272,9 +288,10 @@ export default class Browser{
     const headers = {
           "Accept": "*/*",
           "scheme": "https",
+          "Content-Type": "application/json",
           "Accept-Encoding": "gzip, deflate, br, zstd",
           "Accept-Language": "en-US,en;q=0.9",
-          "Authorization": "bearer " + this.AUTH["boostToken"],
+          "Authorization": "bearer " + this.AUTH["fwToken"],
           "Sec-Fetch-Dest": "empty",
           "Sec-Fetch-Mode": "cors",
           "Sec-Fetch-Site": "same-origin",
@@ -282,8 +299,8 @@ export default class Browser{
           "x-requested-with": "XMLHttpRequest",
           "X-Upwork-Accept-Language": "en-US"
         };
-        const response = await request(this.page, url, headers, data);
-        return response;
+        const response = await graphql(this.page, url, headers, data);
+        return response?.data?.data?.organization?.subscriptionPlan?.connectsBalance || 0;
   }
   async navigate(link, option={}){
     await this.page.goto(link, option);
@@ -304,7 +321,38 @@ export default class Browser{
       const res = await request(this.page, "GET", "https://www.upwork.com/ab/proposals/api/v4/job/details/" + link, headers);
       return res;
   }
-
+  async getJobConnects(link){
+    const headers = {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          Authorization: "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+      };
+      const res = await request(this.page, "GET", ` https://www.upwork.com/job-details/jobdetails/api/job/${link}/connects`, headers);
+      return res?.data?.requiredConnects;    
+  }
+  async getJobBids(id){
+    const headers = {
+          Accept: "application/json, text/plain, */*",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          Authorization: "Bearer " + this.AUTH["oauth"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US",
+      };
+      const res = await request(this.page, "GET", `https://www.upwork.com/ab/proposals/api/v4/application/bids?jobUid=` + id, headers);
+      return res?.data?.bids || [];
+  }
   async getJobs(){
     const headers = {
           "Accept": "application/json, text/plain, */*",
@@ -369,7 +417,7 @@ export default class Browser{
           "X-Upwork-Accept-Language": "en-US",
         };
         const response = await request(this.page, "GET", url, headers);
-        return response.data.searchResults.jobs;
+        return response?.data?.searchResults?.jobs || [];
   }
   async getJobOpening(id){
     const headers = {

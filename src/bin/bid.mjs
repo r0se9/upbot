@@ -1,6 +1,7 @@
 //bin
 import GPT from '../gpt/index.mjs';
 import main from '../core/safeApply.mjs';
+import Poe from '../gpt/poe.mjs';
 import Database from '../db/mongodb.mjs';
 import yargs from 'yargs/yargs';
 import { hideBin } from 'yargs/helpers';
@@ -21,6 +22,12 @@ const argv = yargs(hideBin(process.argv))
     type: 'boolean',
     default: false
   })
+  .option('poe', {
+    alias: 'p',
+    description: 'Use Poe ',
+    type: 'boolean',
+    default: false
+  })
   .option('mode', {
     alias: 'm',
     description: 'Enter the bid mode',
@@ -35,8 +42,14 @@ const USER = 'ken'; // TODO
 const MODE = argv.mode;
 const DEBUG = (argv.debug && argv.debug === true) ? true : false;
 const USEGPT = (argv.gpt && argv.gpt === true) ? true : false;
-
-const gpt = new GPT(process.env.OPENAI_KEY, process.env.GPT_MODEL);
+const USEPOE = (argv.poe && argv.poe === true) ? true : false;
+let gpt;
+if(USEPOE){
+  gpt = new Poe(8080);
+  await gpt.connect();
+} else {
+  gpt = new GPT(process.env.OPENAI_KEY, process.env.GPT_MODEL);
+}
 // TO-DO
 gpt.setPrompt(e=>
 	`
@@ -49,6 +62,9 @@ ${e}
 `);
 gpt.setKnowledgeBase([
 	]);
-const database = new Database(process.env.MONBO_URI);
+const database = new Database(process.env.MONGODB_URI);
 await database.connect();
 await main(gpt, database, USER, MODE, DEBUG, USEGPT);
+if(USEPOE){
+  await gpt.disconnect();
+}

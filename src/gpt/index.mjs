@@ -31,7 +31,7 @@ export default class GPT{
 			return text.choices[0].message.content;
 
 		} catch(e){
-			return DEFAULT_MESSAGE;
+			return this.default || DEFAULT_MESSAGE;
 		}
 
 	}
