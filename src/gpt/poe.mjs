@@ -80,7 +80,7 @@ export default class Poe{
 			
 			text = this.default || DEFAULT_MESSAGE;
 		} 
-		this.disconnect();
+		this.close();
 		return text;
 
 	}
