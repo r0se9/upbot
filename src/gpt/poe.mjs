@@ -44,7 +44,10 @@ export default class Poe{
 
     		// Click the send button
     		await page.click(send_btn_selector);
-    
+    		await page.evaluate(()=>{
+    			const a = document.querySelector('div.MainColumn_scrollSectionOverflow__FbPqw');
+    			a.scrollTo(0, a.scrollHeight);
+    		})
     		console.log("[Info]: Send Button Clicked!");
 
     		// Wait until the send button is not disabled (i.e., ready to be clicked again)
@@ -64,6 +67,10 @@ export default class Poe{
      			// Here you would call your `getting_from_gpt` function which is not included
       			// getting_from_gpt(job_description, type_, getPrompt);
     		} else {
+    			await page.evaluate(()=>{
+    				const a = document.querySelector('div.MainColumn_scrollSectionOverflow__FbPqw');
+    				a.scrollTo(0, a.scrollHeight);
+    			})
       			return cover_letter;
     		}
 

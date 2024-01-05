@@ -5,6 +5,7 @@ import Browser from '../browser/index.mjs';
 // import { getPrompt } from '../gpt/prompt.config.mjs';
 import _ from 'lodash';
 import { wait } from '../utils/time.mjs';
+import { retry } from '../utils/lib.mjs';
 import { updateProgress } from '../utils/decorator.mjs';
 
 
@@ -192,7 +193,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 
 async function checkRestrict(agent){
 	const result = await agent.getMe();
-	const restResult = await agent.isRestricted(result.personUid);
+	const restResult = await retry((e)=>!!e.data.data.developerSuspended, ()=>agent.isRestricted(result.personUid), 100, 10);
 	return restResult.data.data.developerSuspended.suspendedStatus
 
 
