@@ -38,9 +38,9 @@ export default class Poe{
     		// await input.click({ clickCount: 3 }); // Select all the existing text
     		// await page.keyboard.press('Backspace'); // Clear the textarea
     		await page.keyboard.down('Shift');
-     			await page.keyboard.press('Enter'); // Line break without submitting
-      			await page.keyboard.up('Shift');
-    		
+     		await page.keyboard.press('Enter'); // Line break without submitting
+      		await page.keyboard.up('Shift');
+    		await input.type('   ');
 
     		console.log("[Info]: Bid Template Sent!");
 
@@ -53,7 +53,18 @@ export default class Poe{
     		console.log("[Info]: Send Button Clicked!");
 
     		// Wait until the send button is not disabled (i.e., ready to be clicked again)
-    		await page.waitForSelector('footer>div>div>button:not([disabled]):last-child', {timeout: 200000});
+    		await page.waitForFunction(() => {
+    			// Get all elements with the specified class
+    			const elements = document.querySelectorAll('.ChatMessagesView_messagePair__ZEXUz');
+    
+    			// Target the last element of the list
+    			const lastElement = elements[elements.length - 1];
+    
+    			// Now target the second child of the last element
+    			return lastElement && 
+           			lastElement.children[1] && 
+           			lastElement.children[1].getAttribute('data-complete') === 'true';
+  			},{timeout: 30000});
 
     		console.log('[Info]: Waiting button enabled');
 
