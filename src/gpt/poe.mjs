@@ -22,6 +22,8 @@ export default class Poe{
 		this.base = data;
 	}
 	async prompt(prompt_text){
+		let text;
+		await this.connect();
 		try{
 			const template = this.fnPrompt(prompt_text);
 			const input_textarea_selector = 'textarea[placeholder^="Talk to"]';
@@ -60,24 +62,26 @@ export default class Poe{
       			const bid_divs = document.querySelectorAll('div[class^="Markdown_markdownContainer"]');
       			return bid_divs[bid_divs.length -1].textContent;
     		});
-
     		if (cover_letter === "You are sending and receiving too many words in a short period of time.") {
       			const clear_btn_selector = 'button.Button_buttonBase__0QP_m.Button_flat__1hj0f.ChatBreakButton_button__EihE0.ChatMessageInputFooter_chatBreakButton__hqJ3v';
       			await page.click(clear_btn_selector);
      			// Here you would call your `getting_from_gpt` function which is not included
       			// getting_from_gpt(job_description, type_, getPrompt);
+      			text = this.default || DEFAULT_MESSAGE
     		} else {
     			await page.evaluate(()=>{
     				const a = document.querySelector('div.MainColumn_scrollSectionOverflow__FbPqw');
     				a.scrollTo(0, a.scrollHeight);
     			})
-      			return cover_letter;
+      			text =  cover_letter;
     		}
 
 		} catch(e){
-			console.log(e)
-			return DEFAULT_MESSAGE;
-		}
+			
+			text = this.default || DEFAULT_MESSAGE;
+		} 
+		this.disconnect();
+		return text;
 
 	}
 	getAnswer(question){
