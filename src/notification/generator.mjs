@@ -77,7 +77,7 @@ async function checkEmail(email, callback, mail) {
         }
         const subject = message.subject + " " + email;
         await callback({
-          to: process.env.NOTIFIER_EMAIL,
+          to: process.env.EMAIL_NOTIFICATION,
           from: email,
           subject,
           message: `<html>

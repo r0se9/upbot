@@ -193,8 +193,13 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 
 async function checkRestrict(agent){
 	const result = await agent.getMe();
-	const restResult = await retry((e)=>!!e.data.data.developerSuspended, ()=>agent.isRestricted(result.personUid), 100, 10);
-	return restResult.data.data.developerSuspended.suspendedStatus
+	try{
+		const restResult = await retry((e)=>!!e.data.data, ()=>agent.isRestricted(result.personUid), 100, 10);
+		return restResult.data.data.developerSuspended.suspendedStatus
+	}catch(e){
+		return false;
+	}
+	
 
 
 }
