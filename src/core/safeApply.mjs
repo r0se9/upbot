@@ -85,7 +85,18 @@ async function apply(agent, job, gpt, MODE, USEGPT){
 	console.log('=====' + job.title + '=====')
 	console.log('Job was posted ' + moment().diff(job.postedAt)/1000 + 's before')
 	const start = moment();
-	const [coverLetter, {engagementDuration, questions }] = await Promise.all([
+	const myconnects = await agent.getConnects();
+	console.log('Connects: ' + myconnects)
+	const engagementDuration = {
+  "uid": "474250516458926082",
+  "rid": 3,
+  "label": "1 to 3 months",
+  "weeks": 9,
+  "ctime": "2014-06-04T17:59:10.123Z",
+  "mtime": "2014-06-04T17:59:10.123Z",
+  "replacedByUid": null
+};
+	const [coverLetter] = await Promise.all([
 		(async ()=>{
 					const start = moment();
 					let result;
@@ -96,30 +107,22 @@ async function apply(agent, job, gpt, MODE, USEGPT){
 						result = await gpt.default;
 					}
 					return result;
-				})(),
-		(async ()=>{
-			await agent.navigate(job.link, { waitUntil: "networkidle0" });
-			await agent.getAuth();
-			
-			const result = await agent.getJobOpening(job.uid);
-			return {engagementDuration: result.opening.job.engagementDuration, questions: result.questions.questions };
-		})()
+				})()
 		]);
 	const reqConnects = await agent.getJobConnects(job.ciphertext);
 			console.log(`1. Job needs ${reqConnects} connects`);
 			const bids = await agent.getJobBids(job.uid);
 			const connects = bids.map(el=>el.amount);
-			console.log(connects);
 			let amount = 50;
-			if(connects.length===4 && connects[connects.length - 1] + reqConnects === 50){
+			if(connects.length===4 && connects[connects.length - 1] + reqConnects === 50 && !MODE){
 				console.log('Cannot boost!')
 				amount = null;
 			}
+			
 	const result = await agent.applyJob(job.uid, {
 			connects: amount,
 			link: job.link,
 			coverLetter,
-			questions: questions.map(el=>({...el, answer: gpt.getAnswer(el.question)})),
 			amount: job.isFixed ? job.budget: (process.env.HOURLY_RATE || 30),
 			isFixed: job.isFixed,
 			estimatedDuration: !job.isFixed ? null : engagementDuration
@@ -214,6 +217,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 			const { email } = accounts[0];
 		console.log(chalk.green(`Start with ${email}`));
 		const agent = await createAgent(email, DEBUG);
+		// await agent.visitPlan();
 		const isRestricted = await checkRestrict(agent);
 		if(isRestricted){
 			console.log(chalk.red('This has been restricted.'))

@@ -5,6 +5,7 @@ import path from "path";
 import Database from "../db/mongodb.mjs";
 import chalk from "chalk";
 import yargs from "yargs/yargs";
+import { hideBin } from 'yargs/helpers';
 import _ from "lodash";
 dotenv.config();
 const argv = yargs(hideBin(process.argv))

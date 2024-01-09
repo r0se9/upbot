@@ -28,18 +28,18 @@ const argv = yargs(hideBin(process.argv))
     type: 'boolean',
     default: false
   })
-  .option('mode', {
-    alias: 'm',
-    description: 'Enter the bid mode',
-    choices: ['speed', 'boost'],
-    demandOption: true,
+  .option('force', {
+    alias: 'f',
+    description: 'Apply forcefully',
+     type: 'boolean',
+    default: false
   })
   .help()
   .alias('help', 'h')
   .argv;
 
 const USER = 'ken'; // TODO
-const MODE = argv.mode;
+const MODE =  (argv.force && argv.force === true) ? true : false;
 const DEBUG = (argv.debug && argv.debug === true) ? true : false;
 const USEGPT = (argv.gpt && argv.gpt === true) ? true : false;
 const USEPOE = (argv.poe && argv.poe === true) ? true : false;

@@ -259,6 +259,7 @@ export default class Browser{
       const cookies = await this.page.cookies();
       for (const cookie of cookies) {
         if (cookie["name"] === "XSRF-TOKEN") result["token"] = cookie["value"];
+        if (cookie["name"] === "visitor_topnav_gql_token") result["applyToken"] = cookie["value"];
         if (cookie["name"] === "oauth2_global_js_token") result["oauth"] = cookie["value"];
         if (cookie["name"] === "user_uid") result["uid"] = cookie["value"];
         if (cookie["name"] === "console_user") result["oDeskUserID"] = cookie["value"];
@@ -435,7 +436,7 @@ export default class Browser{
       const response = await request(this.page, "GET", "https://www.upwork.com/ab/proposals/api/openings/" + id, headers)
       return response.data;
   }
-  async applyJob(uid, {link, coverLetter, questions, amount, estimatedDuration, isFixed, connects }){
+  async applyJob(uid, {link, coverLetter, amount, estimatedDuration, isFixed, connects }){
     const data = {
           version: 3,
           jobReference: uid,
@@ -447,7 +448,7 @@ export default class Browser{
           occupationUID: null,
           portfolioItemUids: [],
           attachments: [],
-          questions: questions,
+          questions: [],
           milestones: [],
           readyToStartDate: null,
           selectedContractor: {
@@ -462,20 +463,59 @@ export default class Browser{
       if(!isFixed){ 
         data['sri'] = { percent: 0, frequency: 0 };
       }
-      const headers = {
-          Accept: "application/json, text/plain, */*",
-      "Accept-Encoding": "gzip, deflate, br",
+      const cookies = await this.page.cookies();
+      let authorization = undefined;
+      var crsfToken = undefined;
+  const cookie = cookies
+    .map((cookie) => {
+      if (cookie.name == "visitor_topnav_gql_token") {
+        // console.log(`${cookie.name}=${cookie.value}`);
+        authorization = `Bearer ${cookie.value}`;
+      }
+      if (cookie.name == "XSRF-TOKEN") {
+        // console.log(`${cookie.name}=${cookie.value}`);
+        crsfToken = cookie.value;
+      }
+      return `${cookie.name}=${cookie.value}`;
+    })
+    .join("; ");
+      const headers =  {
+      authority: "www.upwork.com",
+      method: "POST",
+      path: "/ab/proposals/api/v2/application/new",
+      scheme: "https",
+      Accept: "application/json, text/plain, */*",
+      "Accept-Encoding": "gzip, deflate, br, zstd",
       "Accept-Language": "en-US,en;q=0.9",
-      Authorization: "Bearer " + this.AUTH["oauth"],
+      Authorization: authorization,
+      Cookie: cookie,
+      "Content-Length": "458",
       "Content-Type": "application/json",
+      Origin: "https://www.upwork.com",
+      Priority: "u=1, i",
+      Referer:
+        "https://www.upwork.com/ab/proposals/job/~011c5bc41941ff8ed5/apply/",
+      "Sec-Ch-Ua":
+        '"Google Chrome";v="119", "Chromium";v="119", ";Not A Brand";v="99"',
+      "Sec-Ch-Ua-Full-Version-List":
+        '"Chromium";v="119.0.6045.105", "Not?A_Brand";v="24.0.0.0"',
+      "Sec-Ch-Ua-Mobile": "?0",
+      "Sec-Ch-Ua-Platform": "Windows",
+      "Sec-Ch-Viewport-Width": "1034",
       "Sec-Fetch-Dest": "empty",
       "Sec-Fetch-Mode": "cors",
       "Sec-Fetch-Site": "same-origin",
-      "x-odesk-csrf-token": this.AUTH["token"],
-      "x-odesk-user-agent": "oDesk LM",
-      "x-requested-with": "XMLHttpRequest",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+      // "User-Agent": 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+      "Vnd-Eo-Parent-Span-Id": "072cd505-4b49-4dbc-add9-ff38cb36647c",
+      "Vnd-Eo-Span-Id": "0ddb3891-753b-4dd3-8817-e225d0891258",
+      "Vnd-Eo-Trace-Id": "820db21aecc75098-HKG",
+      "X-Odesk-Csrf-Token": crsfToken,
+      "X-Odesk-User-Agent": "oDesk LM",
+      "X-Requested-With": "XMLHttpRequest",
       "X-Upwork-Accept-Language": "en-US",
-      };
+    };
       const result = await request(this.page, "POST", "https://www.upwork.com/ab/proposals/api/v2/application/new", headers, data)
       return result;
   }
@@ -562,5 +602,18 @@ export default class Browser{
       };
       const res = await request(this.page, "POST", "https://www.upwork.com/freelancers/settings/api/v1/deactivate-account" , headers, {"reason": "191"});
       return res;
+  }
+  async visitPlan(){
+    const headers = {
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Referer": "https://www.upwork.com/nx/plans/membership/index",
+          "Sec-Fetch-Dest": "document",
+          "Sec-Fetch-Mode": "navigate",
+          "Sec-Fetch-Site": "same-origin"
+      };
+    const res = await request(this.page, "GET", "https://www.upwork.com/nx/plans/membership/change-plan?from=index" , headers);
+    console.log(res)
   }
 }
