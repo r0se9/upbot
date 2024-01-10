@@ -93,6 +93,124 @@ export default class Browser{
     const pages = await this.browser.pages();
     return pages[index]
   }
+  async initPage(){
+    const options = {
+        defaultViewport: null,
+        args: [
+         "--start-maximized"
+         ],
+        headless: this.headless? 'new': false,
+        devtools: false
+      };
+
+      if (process.platform == "linux") options.args.push("--no-sandbox");
+      this.browser = await puppeteer.launch(options);
+      this.browser.on("disconnected", async () => {
+        console.log("BROWSER CRASH");
+        if (this.browser && this.browser.process() != null) this.browser.process().kill("SIGINT");
+      });
+      // const pages = await this.browser.pages();
+      // this.page = pages[0];
+      this.page = await this.browser.newPage();
+      // // await this.page.goto("chrome://settings/");
+      // await this.page.evaluate(() => {
+      //     chrome.settingsPrivate.setDefaultZoom(0.5);
+      // });
+      await this.page.setRequestInterception(true);
+      this.page.on('request', (request) => {
+        // Use the resourceType method to determine the type of the request
+        if (request.resourceType() === 'image' || request.resourceType() === 'stylesheet') {
+          // Abort requests for images or stylesheets
+          request.abort();
+        } else {
+          // Continue with all other requests
+          request.continue();
+      }
+    });
+      await this.page.setDefaultNavigationTimeout(100000);
+  }
+  async loginAPI({user, password}, startUrl = this.AUTH_URL){
+    const apiUrl = 'https://www.upwork.com/ab/account-security/login';
+    
+    // await this.page.goto(startUrl, { waitUntil: 'networkidle0' });
+      // If the title includes "Access Denied", refresh the page
+      const title = await this.page.title();
+      if (title.includes('Access denied')) {
+        console.log('Access Denied detected in the title, refreshing the page...');
+        await this.page.reload();
+      }
+      
+      const cookies = await this.page.cookies();
+  var authorization = undefined;
+  var csrf_token = undefined;
+  const cookie = cookies
+    .map((cookie) => {
+      if (cookie.name == "visitor_topnav_gql_token") {
+        // console.log(`${cookie.name}=${cookie.value}`);
+        authorization = `Bearer ${cookie.value}`;
+      }
+      if (cookie.name == "XSRF-TOKEN") {
+        // console.log(`${cookie.name}=${cookie.value}`);
+        csrf_token = cookie.value;
+      }
+      return `${cookie.name}=${cookie.value}`;
+    })
+    .join("; ");
+      const headers = {
+      authority: "www.upwork.com",
+      method: "POST",
+      path: "/ab/proposals/api/v2/application/new",
+      scheme: "https",
+      Accept: "application/json, text/plain, */*",
+      "Accept-Encoding": "gzip, deflate, br, zstd",
+      "Accept-Language": "en-US,en;q=0.9",
+      Authorization: authorization,
+      Cookie: cookie,
+      "Content-Length": "458",
+      "Content-Type": "application/json",
+      Origin: "https://www.upwork.com",
+      Priority: "u=1, i",
+      Referer:
+        "https://www.upwork.com/ab/proposals/job/~01e442402128fe5029/apply/",
+      "Sec-Ch-Ua":
+        '"Google Chrome";v="119", "Chromium";v="119", ";Not A Brand";v="99"',
+      "Sec-Ch-Ua-Full-Version-List":
+        '"Chromium";v="119.0.6045.105", "Not?A_Brand";v="24.0.0.0"',
+      "Sec-Ch-Ua-Mobile": "?0",
+      "Sec-Ch-Ua-Platform": "Windows",
+      "Sec-Ch-Viewport-Width": "1034",
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+      "Vnd-Eo-Parent-Span-Id": "072cd505-4b49-4dbc-add9-ff38cb36647c",
+      "Vnd-Eo-Span-Id": "0ddb3891-753b-4dd3-8817-e225d0891258",
+      "Vnd-Eo-Trace-Id": "820db21aecc75098-HKG",
+      "X-Odesk-Csrf-Token": csrf_token,
+      "X-Odesk-User-Agent": "oDesk LM",
+      "X-Requested-With": "XMLHttpRequest",
+      "X-Upwork-Accept-Language": "en-US",
+    }
+      const res = await request(this.page, "POST", apiUrl, headers, {
+        login: {
+          mode: "password",
+          username: user,
+          password: password,
+        },
+      });
+      if(res.data.success){
+        console.log('Success Logged in')
+        await this.page.reload();
+        return true;
+      }else{
+        // console.log(res.data)
+        return false;
+        // throw new Error('Login Error')
+      }
+
+
+  }
   async login({user, password}, startUrl = this.AUTH_URL){
     console.log('Login...')
       const options = {
@@ -154,6 +272,7 @@ export default class Browser{
           selector: '#login_control_continue'
         })])
       console.log('========= Got In ==========')
+
       }
   async signUp({user, password}, { firstName, secondName }, inbox, args){
     const options = {
@@ -579,6 +698,8 @@ export default class Browser{
           "x-odesk-user-agent": "oDesk LM",
           "x-requested-with": "XMLHttpRequest",
           "X-Upwork-Accept-Language": "en-US",
+          "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
     };
     const data = {
     query: `\n          query {\n            developerSuspended(id: \"${id}\") {\n              suspendedStatus\n            }\n          }\n        `,
