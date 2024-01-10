@@ -157,7 +157,8 @@ async function followUp(database, agent, email, job, result, MODE, USER){
         
 				await database.update('accounts', { email }, {'$set': {status: 'forbidden'}});
 			}
-      if(opening.opening.job.info.isPtcPrivate){
+      // if(opening.opening.job.info.isPtcPrivate){
+			else{
 				console.log(chalk.red('>>>> Job is private only'))
 				await database.create('applied', {uid: job.uid, status: 'private', name: USER});
 			}

@@ -113,21 +113,23 @@ export default async () => {
   const iterate = async () => {
     console.log("[INFO] Start New Iteration");
     isRunning = true;
-    const emails = await fakeMail.getAll();
+    const emails = (await fakeMail.getAll()).map(el=>el.email);
     console.log(
       `=============== Total Accounts: ${emails.length} ==============`
     );
     const results = [];
-    for (let i = 0; i < emails.length; i += process.env.CHECKNUM || 100) {
-      const chunk = emails.slice(i, i + process.env.CHECKNUM || 100);
+    const chunkNum = process.env.CHECKNUM * 1 || 100
+    for (let i = 0; i < emails.length; i += chunkNum) {
+      const chunk = emails.slice(i, i + chunkNum);
       results.push(chunk);
     }
+    
 
     for (let index in results) {
       console.log(index)
       await Promise.all(
         results[index].map(async (email) => {
-          await checkEmail(email["email"], (e) => gmail.sendMail(e), fakeMail);
+          await checkEmail(email, (e) => gmail.sendMail(e), fakeMail);
         })
       );
     }
