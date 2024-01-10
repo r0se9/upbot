@@ -24,7 +24,9 @@ async function boost(agent, total){
 async function createAgent(user, DEBUG){
 	const first = moment();
 	const upwork = new Browser(!DEBUG);
-	await upwork.login({ user, password: process.env.PASSWORD});
+	await upwork.initPage();
+	await upwork.navigate('https://www.upwork.com/nx/find-work/best-matches', { waitUntil: 'networkidle0' })
+	await retry(e=>e, ()=> upwork.loginAPI({ user, password: process.env.PASSWORD}), 100, 10);
 	await upwork.getAuth();
 	console.log(`New Agent is created in ${moment().diff(first) /1000}s`)
 	return upwork;
@@ -217,7 +219,11 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 		} else{
 			const { email } = accounts[0];
 		console.log(chalk.green(`Start with ${email}`));
-		const agent = await createAgent(email, DEBUG);
+		let agent;
+		
+			agent = await createAgent(email, DEBUG);
+
+		
 		// await agent.visitPlan();
 		const isRestricted = await checkRestrict(agent);
 		if(isRestricted){
