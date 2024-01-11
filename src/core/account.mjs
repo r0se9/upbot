@@ -701,14 +701,14 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     );
 
     console.log(chalk.green('17. General Setting'));
-    await evaluate(
-      upwork.page,
-      "https://www.upwork.com/freelancers/settings/api/v1/profile/me/profile-access",
-      apiHeaders,
-      {
-        profileVisibility: 2
-      }
-    );
+    // await evaluate(
+    //   upwork.page,
+    //   "https://www.upwork.com/freelancers/settings/api/v1/profile/me/profile-access",
+    //   apiHeaders,
+    //   {
+    //     profileVisibility: 2
+    //   }
+    // );
 
     await evaluate(
       upwork.page,

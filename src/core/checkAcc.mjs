@@ -13,6 +13,7 @@ import Database from '../db/mongodb.mjs';
 import GMail from '../utils/gmail.mjs';
 import GPT from '../gpt/index.mjs';
 import { wait } from '../utils/time.mjs';
+import { retry } from '../utils/lib.mjs';
 dotenv.config()
 decorate();
 const argv = yargs(hideBin(process.argv))
@@ -67,13 +68,15 @@ async function request(page, method, url, headers, data) {
 const database = new Database(process.env.MONGODB_URI)
 await database.connect();
 async function getAccounts() {
-	const accounts = await database.get('accounts', { status: {'$in':['active']}, isActive: {'$ne': false}, botName: process.env.BOT});
+	const accounts = await database.get('accounts', { status: {'$in':['applied']}, isActive: {'$ne': false}, botName: process.env.BOT});
 	return accounts;
 }
 async function createAgent(user, DEBUG){
 	const first = moment();
 	const upwork = new Browser(!DEBUG);
-	await upwork.login({ user, password: process.env.PASSWORD});
+	await upwork.initPage();
+	await upwork.navigate('https://www.upwork.com/nx/find-work/best-matches', { waitUntil: 'networkidle0' })
+	await retry(e=>e, ()=> upwork.loginAPI({ user, password: process.env.PASSWORD}), 100, 10);
 	await upwork.getAuth();
 	console.log(`New Agent is created in ${moment().diff(first) /1000}s`)
 	return upwork;
