@@ -159,12 +159,7 @@ export default class GeneratorMail {
         const link = $(mail).attr("href");
 
         const id = getHash(this.email + ":" + subject + ":" + timestamp);
-        if (
-          subject.includes("You have unread messages about the job") ||
-          subject.includes("Offer:") ||
-          subject.includes("Invitation") ||
-          subject.includes("You received a direct")
-        )
+        
           messages.push({
             id,
             fromEmail,

@@ -152,15 +152,15 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 		if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultForbidden_ErrorMessage'){
 			// In this case, job is transferred to private, you cannot bid to that.....
 			const opening = await agent.getJobOpening(job.uid);
-      const isRestricted = await checkRestrict(agent);
-			if(isRestricted){
+      		const isRestricted = await checkRestrict(agent);
+      		const flRestricted = opening.flSuspended;
+			if(isRestricted || flRestricted){
 				console.log(chalk.red('>>>> Account is restricted'));
 				console.log(`delete account with ${email}`)
         
 				await database.update('accounts', { email }, {'$set': {status: 'forbidden'}});
 			}
-      // if(opening.opening.job.info.isPtcPrivate){
-			else{
+      if(opening.opening.job.info.isPtcPrivate){
 				console.log(chalk.red('>>>> Job is private only'))
 				await database.create('applied', {uid: job.uid, status: 'private', name: USER});
 			}

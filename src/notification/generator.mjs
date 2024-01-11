@@ -35,11 +35,10 @@ export class Mail{
 
 async function filterInbox(factory) {
   const messages = await factory.getMessages();
-  // console.log(1, messages);
   return messages.filter((e) => {
     const subject = e["subject"];
     if (!subject) return false;
-    if (subject.includes("Action required")) return true;
+    // if (subject.includes("Action required")) return true;
     if (subject.includes("You have unread")) return true;
     if (subject.includes("You have unread messages about the job")) return true;
     if (subject.includes("Offer:")) return true;
@@ -69,7 +68,7 @@ async function checkEmail(email, callback, mail) {
           detail = await retry(
             (e) => e !== message.link,
             () => GeneratorMail.getDetail(message.link),
-            500,
+            100,
             process.env.MAX_RETRY
           );
         } catch (e) {
