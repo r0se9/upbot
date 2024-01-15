@@ -40,7 +40,7 @@ export default class Poe{
     		await page.keyboard.down('Shift');
      		await page.keyboard.press('Enter'); // Line break without submitting
       		await page.keyboard.up('Shift');
-    		await input.type('   ');
+    		await input.type("Let's go!");
 
     		console.log("[Info]: Bid Template Sent!");
 

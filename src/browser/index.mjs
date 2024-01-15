@@ -556,6 +556,7 @@ export default class Browser{
       return response.data;
   }
   async applyJob(uid, {link, coverLetter, amount, estimatedDuration, isFixed, connects }){
+    console.log(connects)
     const data = {
           version: 3,
           jobReference: uid,

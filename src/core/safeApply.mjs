@@ -82,13 +82,12 @@ function filterJobs(jobs, exclude){
 		else return false;
 	})
 }
-async function apply(agent, job, gpt, MODE, USEGPT){
+async function apply(agent, job, gpt, myconnects, MODE, USEGPT){
 
 	console.log('=====' + job.title + '=====')
 	console.log('Job was posted ' + moment().diff(job.postedAt)/1000 + 's before')
 	const start = moment();
-	const myconnects = await agent.getConnects();
-	console.log('Connects: ' + myconnects)
+	
 	const engagementDuration = {
   "uid": "474250516458926082",
   "rid": 3,
@@ -115,10 +114,12 @@ async function apply(agent, job, gpt, MODE, USEGPT){
 			console.log(`1. Job needs ${reqConnects} connects`);
 			const bids = await agent.getJobBids(job.uid);
 			const connects = bids.map(el=>el.amount);
-			let amount = 50;
+			let amount = myconnects;
 			if(connects.length===4 && connects[connects.length - 1] + reqConnects === 50 && !MODE){
 				console.log('Cannot boost!')
 				amount = null;
+			}else{
+				console.log('Boosted')
 			}
 			
 	const result = await agent.applyJob(job.uid, {
@@ -142,9 +143,11 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 		if(MODE==='boost'){
 			await boost(agent, 20);
 		}
+		const myconnects = await agent.getConnects();
+	console.log('Connects Remaining: ' + myconnects)
 		await Promise.all([
 			database.create('applied', {uid: job.uid, name: USER, mode: MODE, status: 'success', appliedAt: now.toDate(), postedAt: postedAt.toDate() }), 
-			database.update('accounts', { email: email },{ '$set': { status: 'applied'}})
+			database.update('accounts', { email: email },{ '$set': { status: 'applied', connects: myconnects }})
 			]);
 	} else {
 		console.log(chalk.red('============ Application Failed ==========='));
@@ -212,7 +215,7 @@ async function checkRestrict(agent){
 async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 
 	while(true){
-		let accounts = await database.get('accounts', { status: 'active', botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
+		let accounts = await database.get('accounts', { connects:{'$gte': 16 },  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
 			await wait(100 * 1000);
@@ -226,6 +229,13 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 		
 		// await agent.visitPlan();
 		const isRestricted = await checkRestrict(agent);
+		const myconnects = await agent.getConnects();
+	console.log('Connects: ' + myconnects)
+		if(myconnects==0){
+			database.update('accounts', { email: email },{ '$set': { connects: myconnects }})
+			await agent.close();
+			continue;
+		}
 		if(isRestricted){
 			console.log(chalk.red('This has been restricted.'))
 			await database.delete('accounts', { email });
@@ -255,7 +265,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
   		process.stdout.cursorTo(0);
 		const job = filteredJobs[0];
 		console.log(USEGPT ? "GPT MODE" : "MANNUAL MODE")
-		const result = await apply(agent, job, gpt, MODE, USEGPT);
+		const result = await apply(agent, job, gpt, myconnects, MODE, USEGPT);
 		await followUp(database, agent, email, job, result, MODE, USER);
 		await agent.close();
 		}

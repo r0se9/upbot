@@ -118,6 +118,8 @@ async function checkOne(user, DEBUG){
 	const agent = await createAgent(user, DEBUG);
 	const isRestricted = await checkRestrict(agent);
 	const hasMessage = await checkRooms(agent);
+	const connects = await agent.getConnects();
+	console.log(connects)
 	if(isRestricted && !hasMessage){
 		console.log(chalk.red('Delete: ' + user));
 		await agent.closeAccount();
@@ -129,8 +131,10 @@ async function checkOne(user, DEBUG){
 			subject: 'Good news! ' + user,
 			message: 'process.env.EMAIL_NOTIFICATION',
 		})
+
 		//send Mail;
 	}
+	await database.update('accounts', {email: user}, {'$set': {connects}});
 	await agent.close();
 
 }

@@ -497,6 +497,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     //   AUTH
     // );
     const { city, state } = location;
+    console.log(city)
     console.log(chalk.green("14. Add Location"));
     await evaluate(
       upwork.page,
@@ -516,6 +517,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
         phoneCode: location.countryCode,
       }
     );
+
 
     console.log(chalk.green("15. Save Address and Phone"));
 
@@ -720,6 +722,11 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     );
 
     console.log("Account has been created...");
+    console.log(chalk.green('==== Check ====='));
+    await upwork.getAuth();
+    // await upwork.navigate('https://www.upwork.com/nx/find-work/most-recent', {waitUntil:'networkidle0'})
+    const myconnects = await upwork.getConnects(); 
+    console.log('Connects: ' + myconnects)
   } catch (e) {
     console.log(chalk.red("Error: while account creation..."));
     console.log(e);
