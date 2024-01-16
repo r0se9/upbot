@@ -126,7 +126,7 @@ async function apply(agent, job, gpt, myconnects, MODE, USEGPT){
 			connects: amount,
 			link: job.link,
 			coverLetter,
-			amount: job.isFixed ? job.budget: (process.env.HOURLY_RATE || 30),
+			amount: (job.isFixed ? job.budget: (process.env.HOURLY_RATE || 30)) || 30,
 			isFixed: job.isFixed,
 			estimatedDuration: !job.isFixed ? null : engagementDuration
 		});
@@ -216,6 +216,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 
 	while(true){
 		let accounts = await database.get('accounts', { connects:{'$gte': 16 },  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
+		// let accounts = await database.get('accounts', { status:'active',  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
 			await wait(100 * 1000);
