@@ -337,7 +337,7 @@ export default class Browser{
       trying = trying + 1;
       await click({
         component: this.page,
-        selector: "#checkbox-terms",
+        selector: "#checkbox-terms input",
       });
 
       value = await this.page.$eval("#checkbox-terms", (el) => {

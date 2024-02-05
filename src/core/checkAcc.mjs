@@ -68,7 +68,7 @@ async function request(page, method, url, headers, data) {
 const database = new Database(process.env.MONGODB_URI)
 await database.connect();
 async function getAccounts() {
-	const accounts = await database.get('accounts', { status: {'$in':['applied']}, isActive: {'$ne': false}, botName: process.env.BOT});
+	const accounts = await database.get('accounts', { status: {'$in':['active']}, isActive: {'$ne': false},name: 'ken'});
 	return accounts;
 }
 async function createAgent(user, DEBUG){
