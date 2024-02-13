@@ -205,7 +205,8 @@ async function checkRestrict(agent){
 	const result = await agent.getMe();
 	try{
 		const restResult = await retry((e)=>!!e.data.data, ()=>agent.isRestricted(result.personUid), 100, 10);
-		return restResult.data.data.developerSuspended.suspendedStatus
+		const identity = await agent.checkIdentity();
+		return restResult.data.data.developerSuspended.suspendedStatus || identity;
 	}catch(e){
 		return false;
 	}

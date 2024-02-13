@@ -84,7 +84,8 @@ async function createAgent(user, DEBUG){
 async function checkRestrict(agent){
 	const result = await agent.getMe();
 	const restResult = await agent.isRestricted(result.personUid);
-	return restResult?.data?.data?.developerSuspended?.suspendedStatus || false;
+	const identity = await agent.checkIdentity();
+	return (restResult?.data?.data?.developerSuspended?.suspendedStatus || false) || identity;
 
 
 };

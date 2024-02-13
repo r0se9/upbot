@@ -28,6 +28,7 @@ export default class GPT{
             		stream: false,
 				}
 			)
+			console.log(text.choices[0].message.content);
 			return text.choices[0].message.content;
 
 		} catch(e){

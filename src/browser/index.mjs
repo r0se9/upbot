@@ -739,4 +739,12 @@ export default class Browser{
     const res = await request(this.page, "GET", "https://www.upwork.com/nx/plans/membership/change-plan?from=index" , headers);
     console.log(res)
   }
+  async checkIdentity(){
+    try{
+      const numberOfChildren = await this.page.$eval('div.air3-smf-container > div', div => div.childElementCount);
+      return numberOfChildren === 2;
+    }catch(e){
+      return false;
+    }
+  }
 }
