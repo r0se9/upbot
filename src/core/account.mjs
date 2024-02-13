@@ -421,7 +421,6 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     console.log(chalk.green("8. Add Language"));
 
     // skills
-
     const skills = await getSkillIds(upwork.page, profile["skills"], AUTH);
     await evaluate(upwork.page, GQL_URL, gqlHeaders, {
       query:
@@ -492,12 +491,12 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     // Address and Phone
     // const { city, state } = await getLocation(
     //   upwork.page,
-    //   location.city,
+    //   "Tokyo",
     //   location.countryCode,
     //   AUTH
     // );
     const { city, state } = location;
-    console.log(city)
+    // console.log(state)
     console.log(chalk.green("14. Add Location"));
     await evaluate(
       upwork.page,

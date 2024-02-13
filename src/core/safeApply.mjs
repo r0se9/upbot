@@ -121,7 +121,8 @@ async function apply(agent, job, gpt, myconnects, MODE, USEGPT){
 			}else{
 				console.log('Boosted')
 			}
-			
+
+			console.log(job.isFixed ? job.budget: (process.env.HOURLY_RATE || 30))
 	const result = await agent.applyJob(job.uid, {
 			connects: amount,
 			link: job.link,
@@ -161,7 +162,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 				console.log(chalk.red('>>>> Account is restricted'));
 				console.log(`delete account with ${email}`)
         
-				await database.update('accounts', { email }, {'$set': {status: 'forbidden'}});
+				await database.delete('accounts', { email });
 			}
       if(opening.opening.job.info.isPtcPrivate){
 				console.log(chalk.red('>>>> Job is private only'))
@@ -189,7 +190,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultServerError_ErrorMessage'){
 			
 				console.log(chalk.red('Server is temporarily down. Try again in a while.'))
-				await database.update('accounts', { email }, {'$set': {status: 'temporarily'}});
+				await database.delete('accounts', { email }, {'$set': {status: 'temporarily'}});
 		}
 		 else{
 			console.log(result.data);
@@ -215,7 +216,7 @@ async function checkRestrict(agent){
 async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 
 	while(true){
-		let accounts = await database.get('accounts', { connects:{'$gte': 16 },  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
+		let accounts = await database.get('accounts', { connects:{'$gte': 16 }, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		// let accounts = await database.get('accounts', { status:'active',  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))

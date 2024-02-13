@@ -331,20 +331,19 @@ export default class Browser{
 
     let value = false;
     let trying = 0;
-
+    
     while (!value) {
-      if (trying == 5) return false;
+      // if (trying == 5) return false;
       trying = trying + 1;
       await click({
         component: this.page,
         selector: "#checkbox-terms",
       });
 
-      value = await this.page.$eval("#checkbox-terms", (el) => {
+      value = await this.page.$eval("#checkbox-terms input", (el) => {
         return el.value;
       });
 
-      console.log(value);
     }
 
     await Promise.all([
@@ -357,6 +356,7 @@ export default class Browser{
 
     let href;
 
+    await wait(1000*10)
     console.log("[Info] Verifying ...");
     
     const url = await inbox.verify();
@@ -637,6 +637,7 @@ export default class Browser{
       "X-Upwork-Accept-Language": "en-US",
     };
       const result = await request(this.page, "POST", "https://www.upwork.com/ab/proposals/api/v2/application/new", headers, data)
+      console.log(result)
       return result;
   }
   async boost(connects, total, endDate){
