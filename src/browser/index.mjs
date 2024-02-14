@@ -637,7 +637,7 @@ export default class Browser{
       "X-Upwork-Accept-Language": "en-US",
     };
       const result = await request(this.page, "POST", "https://www.upwork.com/ab/proposals/api/v2/application/new", headers, data)
-      console.log(result)
+      // console.log(result)
       return result;
   }
   async boost(connects, total, endDate){
@@ -743,6 +743,15 @@ export default class Browser{
     try{
       const numberOfChildren = await this.page.$eval('div.air3-smf-container > div', div => div.childElementCount);
       return numberOfChildren === 2;
+    }catch(e){
+      return false;
+    }
+  }
+  async checkNews(){
+    try{
+      const badge = await this.page.$$('#nav-main .nav-messages .nav-bubble');
+      // console.log(badge)
+      return badge.length>0;
     }catch(e){
       return false;
     }

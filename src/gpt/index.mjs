@@ -32,6 +32,7 @@ export default class GPT{
 			return text.choices[0].message.content;
 
 		} catch(e){
+			console.log('GPT error')
 			return this.default || DEFAULT_MESSAGE;
 		}
 
