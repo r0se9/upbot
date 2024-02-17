@@ -15,7 +15,7 @@ export default class GeneratorMail {
     this.email = email;
   }
   static create() {
-    const name = "w";
+    const name = "aius";
     const domains = process.env.GENDOMAINS.split(',');
     return generateText(name) + "@" + getRandomElement(domains);
   }

@@ -340,7 +340,7 @@ export default class Browser{
         selector: "#checkbox-terms input",
       });
 
-      value = await this.page.$eval("#checkbox-terms", (el) => {
+      value = await this.page.$eval("#checkbox-terms input", (el) => {
         return el.value;
       });
 

@@ -84,7 +84,8 @@ function filterJobs(jobs, exclude){
 }
 async function apply(agent, job, gpt, myconnects, MODE, USEGPT){
 
-	console.log('=====' + job.title + '=====')
+	console.log('JOB:' + job.title )
+	console.log('ID: ' + job.uid)
 	console.log('Job was posted ' + moment().diff(job.postedAt)/1000 + 's before')
 	const start = moment();
 	
@@ -161,7 +162,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 				console.log(chalk.red('>>>> Account is restricted'));
 				console.log(`delete account with ${email}`)
         
-				await database.update('accounts', { email }, {'$set': {status: 'forbidden'}});
+				await database.delete('accounts', { email });
 			}
       if(opening.opening.job.info.isPtcPrivate){
 				console.log(chalk.red('>>>> Job is private only'))
@@ -181,6 +182,13 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 			console.log(chalk.red('>>>> Job is no longer Available.'));
 			await database.create('applied', {uid: job.uid, status: 'no longer avaialble', name: USER});
 
+		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJ_JA_10'){
+			console.log(chalk.green('>>>> You already applied'));
+			await database.create('applied', {uid: job.uid, status: 'already applied', name: USER});
+
+		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_TNSJobIDVerificationRequired'){
+			await database.delete('accounts', { email });
+
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJF_CONN_1'){
 
 			console.log(chalk.red('>>>> Insufficient connects....'));
@@ -189,7 +197,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultServerError_ErrorMessage'){
 			
 				console.log(chalk.red('Server is temporarily down. Try again in a while.'))
-				await database.update('accounts', { email }, {'$set': {status: 'temporarily'}});
+				await database.delete('accounts', { email }, {'$set': {status: 'temporarily'}});
 		}
 		 else{
 			console.log(result.data);
@@ -215,60 +223,61 @@ async function checkRestrict(agent){
 async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 
 	while(true){
-		let accounts = await database.get('accounts', { connects:{'$gte': 16 },  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
-		// let accounts = await database.get('accounts', { status:'active',  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
+		// let accounts = await database.get('accounts', { connects:{'$gte': 16 },  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
+		let accounts = await database.get('accounts', { status:'active',  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
 			await wait(100 * 1000);
 		} else{
 			const { email } = accounts[0];
-		console.log(chalk.green(`Start with ${email}`));
-		let agent;
+			console.log(chalk.green(`Start with ${email}`));
+			let agent;
 		
 			agent = await createAgent(email, DEBUG);
 
 		
-		// await agent.visitPlan();
-		const isRestricted = await checkRestrict(agent);
-		const myconnects = await agent.getConnects();
-	console.log('Connects: ' + myconnects)
-		if(myconnects==0){
-			database.update('accounts', { email: email },{ '$set': { connects: myconnects }})
-			await agent.close();
-			continue;
-		}
-		if(isRestricted){
-			console.log(chalk.red('This has been restricted.'))
-			await database.delete('accounts', { email });
-			await agent.close();
-			continue;
-		}
-		let filteredJobs = [];
-		let index=0;
-		const startTime = moment();
-		const interval = setInterval(() => {
-  			updateProgress('Searching Job ', startTime, index);
-  			index++;
-		}, 250); // Rotate every 250ms
+			// await agent.visitPlan();
+			const isRestricted = await checkRestrict(agent);
+			const myconnects = await agent.getConnects();
+			console.log('Connects: ' + myconnects)
+
+			if(isRestricted){
+				console.log(chalk.red('This has been restricted.'))
+				await database.delete('accounts', { email });
+				await agent.close();
+				continue;
+			}
+			if(myconnects==0 || myconnects < 16){
+				database.update('accounts', { email: email },{ '$set': { connects: myconnects, status: "applied" }})
+				await agent.close();
+				continue;
+			}
+			let filteredJobs = [];
+			let index=0;
+			const startTime = moment();
+			const interval = setInterval(() => {
+  				updateProgress('Searching Job ', startTime, index);
+  				index++;
+			}, 250); // Rotate every 250ms
 		
 
-		do {
-			const jobs = await getJobs(agent);
-			const saved = await database.get('applied', {uid: {'$in':jobs.map(el=>el.uid)}, name: USER});
-			filteredJobs = filterJobs(jobs, saved.map(el=>el.uid));
-			if(filteredJobs.length===0){
-				await wait(5 * 1000);
-				// console.log('Waiting Job.....')
-			}
-		} while(filteredJobs.length === 0);
-		clearInterval(interval);
-  		process.stdout.clearLine();
-  		process.stdout.cursorTo(0);
-		const job = filteredJobs[0];
-		console.log(USEGPT ? "GPT MODE" : "MANNUAL MODE")
-		const result = await apply(agent, job, gpt, myconnects, MODE, USEGPT);
-		await followUp(database, agent, email, job, result, MODE, USER);
-		await agent.close();
+			do {
+				const jobs = await getJobs(agent);
+				const saved = await database.get('applied', {uid: {'$in':jobs.map(el=>el.uid)}, name: USER});
+				filteredJobs = filterJobs(jobs, saved.map(el=>el.uid));
+				if(filteredJobs.length===0){
+					await wait(5 * 1000);
+					// console.log('Waiting Job.....')
+				}
+			} while(filteredJobs.length === 0);
+			clearInterval(interval);
+  			process.stdout.clearLine();
+  			process.stdout.cursorTo(0);
+			const job = filteredJobs[0];
+			console.log(USEGPT ? "GPT MODE" : "MANNUAL MODE")
+			const result = await apply(agent, job, gpt, myconnects, MODE, USEGPT);
+			await followUp(database, agent, email, job, result, MODE, USER);
+			await agent.close();
 		}
 		
 	}
