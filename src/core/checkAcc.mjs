@@ -68,7 +68,9 @@ async function request(page, method, url, headers, data) {
 const database = new Database(process.env.MONGODB_URI)
 await database.connect();
 async function getAccounts() {
+
 	const accounts = await database.get('accounts', { status: {'$in':['applied']}, isActive: {'$ne': false}, botName: process.env.BOT});
+
 	return accounts;
 }
 async function createAgent(user, DEBUG){
@@ -84,7 +86,8 @@ async function createAgent(user, DEBUG){
 async function checkRestrict(agent){
 	const result = await agent.getMe();
 	const restResult = await agent.isRestricted(result.personUid);
-	return restResult?.data?.data?.developerSuspended?.suspendedStatus || false;
+	const identity = await agent.checkIdentity();
+	return (restResult?.data?.data?.developerSuspended?.suspendedStatus || false) || identity;
 
 
 };
@@ -113,28 +116,34 @@ async function checkRooms(agent){
 	const data = await captureAPI(agent.page, 'https://www.upwork.com/api/v3/rooms/rooms/simplified')
 	return data.rooms.length > 0;
 }
+async function sendMail(user){
+	await retry((e)=>e, async ()=>{
+		await gmail.sendMail({
+			to: process.env.EMAIL_NOTIFICATION,
+			subject: 'Good news! ' + user,
+			message: 'https://generator.email/'+ user,
+		})
+	}, 5* 60 * 1000, 100);
+}
 
 async function checkOne(user, DEBUG){
 	const agent = await createAgent(user, DEBUG);
 	const isRestricted = await checkRestrict(agent);
-	const hasMessage = await checkRooms(agent);
+	const hasMessage = await agent.checkNews();
 	const connects = await agent.getConnects();
 	console.log(connects)
+	await database.update('accounts', {email: user}, {'$set': {connects}});
 	if(isRestricted && !hasMessage){
 		console.log(chalk.red('Delete: ' + user));
 		await agent.closeAccount();
 		await database.delete('accounts', { email: user });
 	}else if(hasMessage){
 		console.log(chalk.green('Message: ' + user));
-		await gmail.sendMail({
-			to: process.env.EMAIL_NOTIFICATION,
-			subject: 'Good news! ' + user,
-			message: 'process.env.EMAIL_NOTIFICATION',
-		})
+		await sendMail(user);
 
 		//send Mail;
 	}
-	await database.update('accounts', {email: user}, {'$set': {connects}});
+
 	await agent.close();
 
 }

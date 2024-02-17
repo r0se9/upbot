@@ -331,9 +331,9 @@ export default class Browser{
 
     let value = false;
     let trying = 0;
-
+    
     while (!value) {
-      if (trying == 5) return false;
+      // if (trying == 5) return false;
       trying = trying + 1;
       await click({
         component: this.page,
@@ -344,7 +344,6 @@ export default class Browser{
         return el.value;
       });
 
-      console.log(value);
     }
 
     await Promise.all([
@@ -357,6 +356,7 @@ export default class Browser{
 
     let href;
 
+    await wait(1000*10)
     console.log("[Info] Verifying ...");
     
     const url = await inbox.verify();
@@ -637,6 +637,7 @@ export default class Browser{
       "X-Upwork-Accept-Language": "en-US",
     };
       const result = await request(this.page, "POST", "https://www.upwork.com/ab/proposals/api/v2/application/new", headers, data)
+      // console.log(result)
       return result;
   }
   async boost(connects, total, endDate){
@@ -737,5 +738,22 @@ export default class Browser{
       };
     const res = await request(this.page, "GET", "https://www.upwork.com/nx/plans/membership/change-plan?from=index" , headers);
     console.log(res)
+  }
+  async checkIdentity(){
+    try{
+      const numberOfChildren = await this.page.$eval('div.air3-smf-container > div', div => div.childElementCount);
+      return numberOfChildren === 2;
+    }catch(e){
+      return false;
+    }
+  }
+  async checkNews(){
+    try{
+      const badge = await this.page.$$('#nav-main .nav-messages .nav-bubble');
+      // console.log(badge)
+      return badge.length>0;
+    }catch(e){
+      return false;
+    }
   }
 }

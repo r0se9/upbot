@@ -54,51 +54,52 @@ class GMail {
   // Send mail method
   async sendMail({ to, from, subject, message }) {
     // const auth = await this.Authenticate();
-    const data = await this.searchEmail({ subject });
-    let resource;
-
-    if (data.resultSizeEstimate) {
-      const { threadId, id } = data.messages[0];
-      const res = await this.gmail.users.messages.get({
-        userId: "me",
-        id, // change this to your message's id
-        format: "full", // full format to get all parts of the message
-      });
-      const headers = res.data.payload.headers;
-      let messageId;
-      let reference;
-      headers.forEach((header) => {
-        if (header.name === "Message-Id") {
-          messageId = header.value;
-        }
-        if (header.name === "References") {
-          reference = header.value;
-        }
-      });
-      if (reference) {
-        reference = reference + " " + messageId;
-      } else {
-        reference = messageId;
-      }
-      const raw = this.createEmail(
-        to,
-        from,
-        subject,
-        message,
-        messageId,
-        reference
-      );
-      resource = {
-        raw,
-        threadId,
-      };
-    } else {
-      const raw = this.createEmail(to, from, subject, message);
-      resource = {
-        raw,
-      };
-    }
     try {
+      const data = await this.searchEmail({ subject });
+      let resource;
+
+      if (data.resultSizeEstimate) {
+        const { threadId, id } = data.messages[0];
+        const res = await this.gmail.users.messages.get({
+          userId: "me",
+          id, // change this to your message's id
+          format: "full", // full format to get all parts of the message
+        });
+        const headers = res.data.payload.headers;
+        let messageId;
+        let reference;
+        headers.forEach((header) => {
+          if (header.name === "Message-Id") {
+            messageId = header.value;
+          }
+          if (header.name === "References") {
+            reference = header.value;
+          }
+        });
+        if (reference) {
+          reference = reference + " " + messageId;
+        } else {
+          reference = messageId;
+        }
+        const raw = this.createEmail(
+          to,
+          from,
+          subject,
+          message,
+          messageId,
+          reference
+        );
+        resource = {
+          raw,
+          threadId,
+        };
+      } else {
+        const raw = this.createEmail(to, from, subject, message);
+        resource = {
+          raw,
+        };
+      }
+
       const res = await this.gmail.users.messages.send({
         userId: "me",
         resource,
