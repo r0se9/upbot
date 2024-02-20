@@ -284,8 +284,8 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       { firstName: profile["firstName"], secondName: profile["lastName"] },
       inbox,
       [
-        `--disable-extensions-except=${pathToExtension}`,
-        `--load-extension=${pathToExtension}`,
+        // `--disable-extensions-except=${pathToExtension}`,
+        // `--load-extension=${pathToExtension}`,
       ]
     );
     console.log("Successfully Verified.");
@@ -723,7 +723,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     console.log("Account has been created...");
     console.log(chalk.green('==== Check ====='));
     await upwork.getAuth();
-    // await upwork.navigate('https://www.upwork.com/nx/find-work/most-recent', {waitUntil:'networkidle0'})
+    await upwork.navigate('https://www.upwork.com/nx/find-work/most-recent', {waitUntil:'networkidle0'})
     const myconnects = await upwork.getConnects(); 
     console.log('Connects: ' + myconnects)
   } catch (e) {

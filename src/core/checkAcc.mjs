@@ -23,6 +23,18 @@ const argv = yargs(hideBin(process.argv))
     type: 'boolean',
     default: false
   })
+ .option("status", {
+    alias: "s",
+    description: "Enter statues active|applied",
+    type: "string",
+    demandOption: true,
+  })
+  .option("user", {
+    alias: "u",
+    description: "Enter your profile usernames, separated by |",
+    type: "string",
+    default: '',
+  })
   .help()
   .alias('help', 'h')
   .argv;
@@ -32,6 +44,10 @@ const gmail = new GMail(JSON.parse(credential));
 
 
 const DEBUG = (argv.debug && argv.debug === true) ? true : false;
+const statuses = argv.status.split('|');
+const users = argv.user.split('|').filter(e=>e!=='');
+
+
 async function request(page, method, url, headers, data) {
   const config = {method, headers, credentials: 'include'};
   if(method==='POST')config.body = JSON.stringify(data || {});
@@ -68,7 +84,10 @@ async function request(page, method, url, headers, data) {
 const database = new Database(process.env.MONGODB_URI)
 await database.connect();
 async function getAccounts() {
-	const accounts = await database.get('accounts', { status: {'$in':['active']}, isActive: {'$ne': false}, name:'nathan'}, { createdAt: -1});
+	const query = { status: {'$in':statuses}, isActive: {'$ne': false}};
+	if(users.length) query.name = {'$in': users};
+	const accounts = await database.get('accounts', query);
+	console.log(chalk.green(`Pushed ${accounts.length} accounts to the hell....`))
 	return accounts;
 }
 async function createAgent(user, DEBUG){
