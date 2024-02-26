@@ -439,7 +439,7 @@ export default class Browser{
           "X-Upwork-Accept-Language": "en-US",
       };
       const res = await request(this.page, "GET", "https://www.upwork.com/ab/proposals/api/v4/job/details/" + link, headers);
-      return res;
+      return res?.data;
   }
   async getJobConnects(link){
     const headers = {
@@ -474,20 +474,49 @@ export default class Browser{
       return res?.data?.bids || [];
   }
   async getJobs(){
+    const data = {
+      query: "query($limit: Int, $toTime: String) {\n        mostRecentJobsFeed(limit: $limit, toTime: $toTime) {\n          results {\n            id,\n            uid:id\n            title,\n            ciphertext,\n            description,\n            type,\n            recno,\n            freelancersToHire,\n            duration,\n            engagement,\n            amount {\n              amount,\n            },\n            createdOn:createdDateTime,\n            publishedOn:publishedDateTime,\n            prefFreelancerLocationMandatory,\n            connectPrice,\n            client {\n              totalHires\n              totalSpent\n              paymentVerificationStatus,\n              location {\n                country,\n              },\n              totalReviews\n              totalFeedback,\n              hasFinancialPrivacy\n            },\n            tierText\n            tier\n            tierLabel\n            proposalsTier\n            enterpriseJob\n            premium,\n            jobTs:jobTime,\n            attrs:skills {\n              id,\n              uid:id,\n              prettyName:prefLabel\n              prefLabel\n            }\n            hourlyBudget {\n              type\n              min\n              max\n            }\n          },\n          paging {\n            total,\n            count,\n            resultSetTs:minTime,\n            maxTime\n          }\n        }\n      }",
+      variables: {limit: 10}
+    }
+    const url ='https://www.upwork.com/api/graphql/v1';
     const headers = {
-          "Accept": "application/json, text/plain, */*",
-          "Accept-Encoding": "gzip, deflate, br",
+          "Accept": "*/*",
+          "scheme": "https",
+          "Content-Type": "application/json",
+          "Accept-Encoding": "gzip, deflate, br, zstd",
           "Accept-Language": "en-US,en;q=0.9",
-          "Authorization": "Bearer " + this.AUTH["oauth"],
+          "Authorization": "bearer " + this.AUTH["fwToken"],
           "Sec-Fetch-Dest": "empty",
           "Sec-Fetch-Mode": "cors",
           "Sec-Fetch-Site": "same-origin",
           "x-odesk-user-agent": "oDesk LM",
           "x-requested-with": "XMLHttpRequest",
-          "X-Upwork-Accept-Language": "en-US",
+          "X-Upwork-Accept-Language": "en-US"
         };
-        const response = await request(this.page, "GET", process.env.MOST_RECENT_URL, headers);
-        return response.data.results;
+        const response = await graphql(this.page, url, headers, data);
+        return response?.data?.data?.mostRecentJobsFeed?.results || [];
+  }
+  async getBestJobs(){
+    const data = {
+    "query": "\n  query bestMatches {\n    bestMatchJobsFeed(limit: 30) {\n      results {\n        uid:id\n        title\n        ciphertext\n        description\n        type\n        recno\n        freelancersToHire\n        duration\n        durationLabel\n        engagement\n        amount {\n          amount\n          currencyCode\n        }\n        createdOn:createdDateTime\n        publishedOn:publishedDateTime\n        renewedOn:renewedDateTime\n        prefFreelancerLocation\n        prefFreelancerLocationMandatory\n        connectPrice\n        client {\n          totalHires\n          totalSpent\n          paymentVerificationStatus\n          location {\n            country\n            city\n            state\n            countryTimezone\n            worldRegion\n          }\n          totalReviews\n          totalFeedback\n          hasFinancialPrivacy\n        }\n        enterpriseJob\n        premium\n        jobTime\n        skills {\n          id\n          prefLabel\n        }\n        tierText\n        tier\n        tierLabel\n        proposalsTier\n        isApplied\n        hourlyBudget {\n          type\n          min\n          max\n        }\n        weeklyBudget {\n          amount\n        }\n        clientRelation {\n          companyName\n          lastContractRid\n          lastContractTitle\n        }\n        relevanceEncoded\n        attrs {\n          uid:id\n          prettyName\n          freeText\n          skillType\n        }\n      }\n      paging {\n        total\n        count\n        minTime\n        maxTime\n      }\n    }\n  }"
+    }
+    const url ='https://www.upwork.com/api/graphql/v1';
+    const headers = {
+          "Accept": "*/*",
+          "scheme": "https",
+          "Content-Type": "application/json",
+          "Accept-Encoding": "gzip, deflate, br, zstd",
+          "Accept-Language": "en-US,en;q=0.9",
+          "Authorization": "bearer " + this.AUTH["fwToken"],
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "x-odesk-user-agent": "oDesk LM",
+          "x-requested-with": "XMLHttpRequest",
+          "X-Upwork-Accept-Language": "en-US"
+        };
+        const response = await graphql(this.page, url, headers, data);
+        return response?.data?.data?.bestMatchJobsFeed?.results || [];
   }
   async searchJobs(){
     const headers = {
@@ -556,7 +585,6 @@ export default class Browser{
       return response.data;
   }
   async applyJob(uid, {link, coverLetter, amount, estimatedDuration, isFixed, connects }){
-    console.log(connects)
     const data = {
           version: 3,
           jobReference: uid,

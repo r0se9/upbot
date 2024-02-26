@@ -34,6 +34,21 @@ const argv = yargs(hideBin(process.argv))
      type: 'boolean',
     default: false
   })
+  .option('best', {
+    description: 'Apply for the best matched jobs',
+     type: 'boolean',
+    default: false
+  })
+  .option('recent', {
+    description: 'Apply for the most recent jobs',
+     type: 'boolean',
+    default: false
+  })
+  .option('search', {
+    description: 'Advanced search to apply',
+     type: 'boolean',
+    default: false
+  })
   .help()
   .alias('help', 'h')
   .argv;
@@ -43,6 +58,11 @@ const MODE =  (argv.force && argv.force === true) ? true : false;
 const DEBUG = (argv.debug && argv.debug === true) ? true : false;
 const USEGPT = (argv.gpt && argv.gpt === true) ? true : false;
 const USEPOE = (argv.poe && argv.poe === true) ? true : false;
+const BIDMODE = {
+  isBest : argv.best,
+  isRecent: (!argv.best && !argv.search )? true :argv.recent,
+  isSearch: argv.search
+}
 let gpt;
 if(USEPOE){
   gpt = new Poe(8080);
@@ -64,7 +84,7 @@ gpt.setKnowledgeBase([
 	]);
 const database = new Database(process.env.MONGODB_URI);
 await database.connect();
-await main(gpt, database, USER, MODE, DEBUG, USEGPT);
+await main(gpt, database, USER, MODE, DEBUG, USEGPT, BIDMODE);
 if(USEPOE){
   await gpt.disconnect();
 }

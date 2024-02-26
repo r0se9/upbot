@@ -35,42 +35,73 @@ async function getLastAppliedJobs(){
 	const uids = await database.get('applied', { name: USER }, { sort: { postedAt: 1 }, limit: 10 });
 	return uids.map(el=>el.uid);
 }
-async function getJobs(agent){
-	const results = await Promise.all([agent.getJobs(), agent.searchJobs()]);
-	const result = results[0];
-	_.forEach(results[1], item=>{
-		if(!_.find(result, ['uid', item.uid])){
-			result.push(item);
-		}
-	})
-	
+async function getJobs(agent, BIDMODE) {
+  const query = [];
+  if (BIDMODE.isRecent) query.push(agent.getJobs());
+  if (BIDMODE.isBest) query.push(agent.getBestJobs());
+  if (BIDMODE.isSearch) query.push(agent.searchJobs());
+  const results = await Promise.all(query);
+  const result = results[0];
+  _.forEach(results[1], (item) => {
+    if (!_.find(result, ["uid", item.uid])) {
+      result.push(item);
+    }
+  });
+  _.forEach(results[2], (item) => {
+    if (!_.find(result, ["uid", item.uid])) {
+      result.push(item);
+    }
+  });
+  const jobs = result.map( (el) => {
+      const publishedOn = moment(
+        el.renewedOn ? el.renewedOn : el.publishedOn
+      ).tz("UTC");
+      const re = {
+        uid: el.uid,
+        type: el.hourlyBudget.type,
+        client: el.client,
+        title: el.title,
+        description: el.description,
+        postedAt: publishedOn.toDate(),
+        link: `https://www.upwork.com/ab/proposals/job/${el.ciphertext}/apply/`,
+        ciphertext: el.ciphertext,
+        category: el.occupations,
+      };
+      const isFixed = el.amount.amount ? true : false;
+      re.isFixed = isFixed;
+      if (isFixed) {
+        re.budget = el.amount.amount;
+      } else {
+        re.budget = el.hourlyBudget;
+      }
+      return re;
+    });
+  for(let index in jobs){
+  	const detail = await agent.getJobDetail({ link: jobs[index].ciphertext });
 
-	
-	const jobs = result.map(el=>{
-		const publishedOn = moment(el.renewedOn ? el.renewedOn : el.publishedOn).tz('UTC');
-	const result = {uid: el.uid, type: el.hourlyBudget.type,  client: el.client, title: el.title, description: el.description,  postedAt: publishedOn.toDate(), link: `https://www.upwork.com/ab/proposals/job/${el.ciphertext}/apply/`, ciphertext: el.ciphertext, category: el.occupations };
-	const isFixed = el.amount.amount ? true: false;
-	result.isFixed = isFixed;
-	if(isFixed){
-		result.budget = el.amount.amount;
-	}else{
-		result.budget = el.hourlyBudget;
-	}
 
-	return result;
-	});
-	return jobs;
+    jobs[index].category = detail.jobDetails?.opening?.job?.categoryGroup.name;
+
+  }
+  return jobs;
 }
+
 const BANNED_COUNTRIES = [
 	'India', 'Pakistan', 'South Korea'
 	]
 function filterJobs(jobs, exclude){
 	return _.filter(jobs, job=>{
 		let score = 0;
+		
 		if(exclude.includes(job.uid)) return false;
-		if(job.category.category.prefLabel === 'Web, Mobile & Software Dev') return false;
-		if(job.category.subcategories.prefLabel === 'Data Entry & Transcription Services') return false;
-		if(job.client.location.country && BANNED_COUNTRIES.includes(job.client.location.country)) score--;
+		if(job.client?.location?.country && BANNED_COUNTRIES.includes(job.client.location.country)) return false;
+		
+		if(job.category === 'Web, Mobile & Software Dev') {
+		// console.log(job.title, job.category)	
+			return false;
+		}else{
+			// console.log(job)
+		}
 		if(job.isFixed){
 			if(job.budget < process.env.FIXED_LIMIT) score --;
 			else score ++;
@@ -127,7 +158,7 @@ async function apply(agent, job, gpt, myconnects, MODE, USEGPT){
 			connects: amount,
 			link: job.link,
 			coverLetter,
-			amount: (job.isFixed ? job.budget: (process.env.HOURLY_RATE || 30)) || 30,
+			amount: (job.isFixed ? job.budget: (process.env.HOURLY_RATE * 1 || 30)) || 30,
 			isFixed: job.isFixed,
 			estimatedDuration: !job.isFixed ? null : engagementDuration
 		});
@@ -182,6 +213,12 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 			console.log(chalk.red('>>>> Job is no longer Available.'));
 			await database.create('applied', {uid: job.uid, status: 'no longer avaialble', name: USER});
 
+		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJ_JA_10'){
+
+			console.log(chalk.red('>>>> Double application'));
+			console.log(job.uid, USER)
+			await database.create('applied', {uid: job.uid, status: 'already applied', name: USER});
+
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJF_CONN_1'){
 
 			console.log(chalk.red('>>>> Insufficient connects....'));
@@ -194,7 +231,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 		}
 		 else{
 			console.log(result.data);
-			await wait(1* 1000);	
+			await wait(600 * 1000);	
 		}
 		
 	}
@@ -214,7 +251,11 @@ async function checkRestrict(agent){
 
 
 }
-async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
+async function main(gpt, database, USER, MODE, DEBUG, USEGPT, BIDMODE){
+
+	if(BIDMODE.isRecent) console.log(chalk.green('Recent job search: Enabled'))
+	if(BIDMODE.isBest) console.log(chalk.green('Best job search: Enabled'))
+	if(BIDMODE.isSearch) console.log(chalk.green('Advanced job search: Enabled'))
 
 	while(true){
 		let accounts = await database.get('accounts', { connects:{'$gte': 16 }, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
@@ -255,9 +296,9 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT){
 		
 
 		do {
-			const jobs = await getJobs(agent);
+			const jobs = await getJobs(agent, BIDMODE);
 			const saved = await database.get('applied', {uid: {'$in':jobs.map(el=>el.uid)}, name: USER});
-			filteredJobs = filterJobs(jobs, saved.map(el=>el.uid));
+			filteredJobs = await filterJobs(jobs, saved.map(el=>el.uid));
 			if(filteredJobs.length===0){
 				await wait(5 * 1000);
 				// console.log('Waiting Job.....')
