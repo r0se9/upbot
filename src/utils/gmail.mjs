@@ -105,7 +105,6 @@ class GMail {
         resource,
       });
       return true;
-      console.log("Message Sent");
     } catch (e) {
       console.error(e);
       return false;
