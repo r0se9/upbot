@@ -134,13 +134,11 @@ async function checkRooms(agent){
 	return data.rooms.length > 0;
 }
 async function sendMail(user){
-	await retry((e)=>e, async ()=>{
-		await gmail.sendMail({
+	await retry((e)=>e, gmail.sendMail({
 			to: process.env.EMAIL_NOTIFICATION,
 			subject: 'Good news! ' + user,
 			message: 'https://generator.email/'+ user,
-		})
-	}, 5* 60 * 1000, 100);
+		}), 5* 60 * 1000, 100);
 }
 
 async function checkOne(user, DEBUG){
