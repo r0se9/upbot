@@ -199,8 +199,7 @@ export default class Browser{
           password: password,
         },
       });
-
-      if(res.status === 'success'){
+      if(res.status === 'success' && res.data.userNid){
         console.log('Success Logged in')
         await this.page.reload();
         return true;
@@ -421,7 +420,10 @@ export default class Browser{
           "X-Upwork-Accept-Language": "en-US"
         };
         const response = await graphql(this.page, url, headers, data);
-        return response?.data?.data?.organization?.subscriptionPlan?.connectsBalance || 0;
+        return response?.data?.data?.organization?.subscriptionPlan?.connectsBalance;
+  }
+  async refresh(){
+    await this.page.reload();
   }
   async navigate(link, option={}){
     await this.page.goto(link, option);

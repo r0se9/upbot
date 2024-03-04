@@ -13,7 +13,7 @@ import Database from '../db/mongodb.mjs';
 import GMail from '../utils/gmail.mjs';
 import GPT from '../gpt/index.mjs';
 import { wait } from '../utils/time.mjs';
-import { retry } from '../utils/lib.mjs';
+import { retry, retry_v2 } from '../utils/lib.mjs';
 dotenv.config()
 decorate();
 const argv = yargs(hideBin(process.argv))
@@ -100,6 +100,20 @@ async function createAgent(user, DEBUG){
 	console.log(`New Agent is created in ${moment().diff(first) /1000}s`)
 	return upwork;
 }
+async function checkConnect(agent) {
+	const result = await retry_v2(e=>e!==undefined, {
+		callback: async ()=>{
+			const resu = await agent.getConnects(); 
+			return resu;
+		},
+		onError: async ()=>{
+			await agent.refresh();
+			await agent.getAuth();
+		}
+	}, 10, 10);
+	return result;
+	// body...
+}
 async function checkRestrict(agent){
 	const result = await agent.getMe();
 	const restResult = await agent.isRestricted(result.personUid);
@@ -145,7 +159,7 @@ async function checkOne(user, DEBUG){
 	const agent = await createAgent(user, DEBUG);
 	const isRestricted = await checkRestrict(agent);
 	const hasMessage = await agent.checkNews();
-	const connects = await agent.getConnects();
+	const connects = await checkConnect(agent);
 	console.log(connects)
 	await database.update('accounts', {email: user}, {'$set': {connects}});
 	if(isRestricted && !hasMessage){
@@ -169,7 +183,7 @@ async function main(){
 			console.log('Check: '+ user)
 			await checkOne(user, DEBUG);
 		} catch(e){
-			console.log(chalk.red('error' + user))
+			console.log(e)
 		}
 		
 	}

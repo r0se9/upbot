@@ -78,6 +78,24 @@ export async function retry(validator, callback, timeout, maximumTry) {
 
   throw new Error("Maximum Retry Timeout");
 }
+export async function retry_v2(validator, {callback, onSuccess, onError}, timeout, maximumTry) {
+  let tries = 0;
+  while (maximumTry > tries) {
+    const result = await callback();
+    if (validator(result)) {
+      onSuccess && await onSuccess();
+      return result;
+    }
+    else {
+      onError && await onError();
+      console.log(`Let's retry: ${tries + 1}`);
+      await wait(timeout);
+      tries++;
+    }
+  }
+
+  throw new Error("Maximum Retry Timeout");
+}
 // Function to convert image to base64
 export const imageToBase64 = (filePath) => new Promise((resolve, reject) => {
   // Read the file into a buffer
