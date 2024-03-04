@@ -723,19 +723,20 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     console.log("Account has been created...");
     console.log(chalk.green('==== Check ====='));
     await upwork.getAuth();
-    await upwork.navigate('https://www.upwork.com/nx/find-work/most-recent', {waitUntil:'networkidle0'})
-    const myconnects = await upwork.getConnects(); 
-    console.log('Connects: ' + myconnects)
+    // await upwork.navigate('https://www.upwork.com/nx/find-work/most-recent', {waitUntil:'networkidle0'})
+    
   } catch (e) {
     console.log(chalk.red("Error: while account creation..."));
     console.log(e);
     await upwork.close();
     return false;
   }
+  const info = await upwork.getMe();
   if(!argv.premium){
     await db.create("accounts", {
       email: inbox.email,
       type: inboxType,
+      link: info.identity.ciphertext,
       botName: botName,
       status: "active",
       name: profileName,
@@ -858,6 +859,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       type: inboxType,
       botName: botName,
       status: "active",
+      link: info.identity.ciphertext,
       name: profileName,
       isActive: true,
       isPremium: false,
