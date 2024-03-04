@@ -199,7 +199,8 @@ export default class Browser{
           password: password,
         },
       });
-      if(res.data.success){
+
+      if(res.status === 'success'){
         console.log('Success Logged in')
         await this.page.reload();
         return true;
