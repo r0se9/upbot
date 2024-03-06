@@ -199,11 +199,19 @@ export default class Browser{
           password: password,
         },
       });
-      if(res.status === 'success' && res.data.userNid){
+     
+      if(res.status === 'success' && res.data.userNid && res.data.reactivateAccount!==true ){
         console.log('Success Logged in')
         await this.page.reload();
         return true;
-      }else{
+      } else if(res.status == 'success' && res.data.reactivateAccount){
+        throw new Error('closed_account');        
+      }
+      else if(res.status === 'success' && res.data && res.data.alerts && res.data.alerts.top.length){
+
+        throw new Error('closed_account');
+      }
+      else{
         // console.log(res.data)
         return false;
         // throw new Error('Login Error')
@@ -359,9 +367,9 @@ export default class Browser{
     await wait(1000*10)
     console.log("[Info] Verifying ...");
     
-    const url = await inbox.verify();
-    await this.page.goto(url, { timeout: 45000 });
-    await wait(5000);
+    // const url = await inbox.verify();
+    // await this.page.goto(url, { timeout: 45000 });
+    // await wait(5000);
   }
   async close(){
     await Promise.race([
@@ -520,6 +528,75 @@ export default class Browser{
         };
         const response = await graphql(this.page, url, headers, data);
         return response?.data?.data?.bestMatchJobsFeed?.results || [];
+  }
+  async addPortfolio(portfolio){
+    const changeProjectProperties = function (obj) {
+            Object.keys(obj).forEach(function (key) {
+                if (key === "attachments" && obj[key] != null && obj[key][key] != null) {
+                    obj[key] = obj[key][key];
+                }
+                else if (key === 'projectUid') {
+                    obj[key] = null;
+                }
+                else if (key === 'ontologySkill') {
+                    obj[key] = null;
+                }
+                else if (obj[key] != null && typeof obj[key] === 'object') {
+                    changeProjectProperties(obj[key]);
+                }
+            });
+        }
+    portfolio.uid = null;
+    await changeProjectProperties(portfolio);
+    const data = {
+        project: portfolio,
+    };
+    var authorization = undefined;
+    var csrf_token = undefined;
+    const cookies = await this.page.cookies();
+    const cookie = cookies.map((cookie) => {
+        if (cookie.name == 'visitor_topnav_gql_token') {
+            // console.log(`${cookie.name}=${cookie.value}`);
+            authorization = `Bearer ${cookie.value}`;
+        }
+        if (cookie.name == 'XSRF-TOKEN') {
+            // console.log(`${cookie.name}=${cookie.value}`);
+            csrf_token = cookie.value;
+        }
+        return `${cookie.name}=${cookie.value}`;
+    }).join('; ');
+    const headers = {
+            "authority": "www.upwork.com",
+            "method": "POST",
+            "path": "/freelancers/api/v1/profile/me/project",
+            "scheme": "https",
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Authorization": authorization,
+            "Content-Length": "952",
+            "Content-Type": "application/json",
+            "Origin": "https://www.upwork.com",
+            "Referer": "https://www.upwork.com/ab/portfolios/new/preview/",
+            "Sec-Ch-Ua": "\"Google Chrome\";v=\"119\", \"Chromium\";v=\"119\", \";Not A Brand\";v=\"99\"",
+            "Sec-Ch-Ua-Full-Version-List": "\"Chromium\";v=\"119.0.6045.105\", \"Not?A_Brand\";v=\"24.0.0.0\"",
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": "Windows",
+            "Sec-Ch-Viewport-Width": "967",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Vnd-Eo-Parent-Span-Id": "52ad7d85-1ca2-4861-b596-946bbf2cedda",
+            "Vnd-Eo-Span-Id": "045ceab3-fdd6-435f-8e72-fba32caa2f72",
+            "Vnd-Eo-Trace-Id": "8305c64a889107a7-HKG",
+            "X-Odesk-Csrf-Token": csrf_token,
+            "X-Odesk-User-Agent": "oDesk LM",
+            "X-Requested-With": "XMLHttpRequest",
+            "X-Upwork-Accept-Language": "en-US"
+        };
+        const result = await request(this.page, "POST", "https://www.upwork.com/freelancers/api/v1/profile/me/project", headers, data);
+        console.log(result);
   }
   async searchJobs(){
     const headers = {
