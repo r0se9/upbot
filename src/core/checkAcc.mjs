@@ -91,11 +91,11 @@ async function getAccounts() {
 	return accounts;
 }
 async function createAgent(DEBUG){
-	const first = moment();
 	const upwork = new Browser(!DEBUG);
 	return upwork;
 }
 async function init(upwork, user){
+	const first = moment();
 	await upwork.initPage();
 	await upwork.navigate('https://www.upwork.com/nx/find-work/best-matches', { waitUntil: 'networkidle0' })
 	await retry(e=>e, ()=> upwork.loginAPI({ user, password: process.env.PASSWORD}), 100, 10);
@@ -178,7 +178,9 @@ async function checkOne(user, DEBUG){
 		}
 		
 	}catch(e){
+	
 		if(e.message == 'closed_account'){
+			console.log(chalk.red('closed account'))
 			await database.delete('accounts', { email: user });
 		}
 	}
