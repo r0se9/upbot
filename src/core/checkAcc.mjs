@@ -90,15 +90,17 @@ async function getAccounts() {
 	console.log(chalk.green(`Pushed ${accounts.length} accounts to the hell....`))
 	return accounts;
 }
-async function createAgent(user, DEBUG){
+async function createAgent(DEBUG){
 	const first = moment();
 	const upwork = new Browser(!DEBUG);
+	return upwork;
+}
+async function init(upwork, user){
 	await upwork.initPage();
 	await upwork.navigate('https://www.upwork.com/nx/find-work/best-matches', { waitUntil: 'networkidle0' })
 	await retry(e=>e, ()=> upwork.loginAPI({ user, password: process.env.PASSWORD}), 100, 10);
 	await upwork.getAuth();
 	console.log(`New Agent is created in ${moment().diff(first) /1000}s`)
-	return upwork;
 }
 async function checkConnect(agent) {
 	const result = await retry_v2(e=>e!==undefined, {
@@ -156,24 +158,33 @@ async function sendMail(user){
 }
 
 async function checkOne(user, DEBUG){
-	const agent = await createAgent(user, DEBUG);
-	const isRestricted = await checkRestrict(agent);
-	const hasMessage = await agent.checkNews();
-	const connects = await checkConnect(agent);
-	console.log(connects)
-	await database.update('accounts', {email: user}, {'$set': {connects}});
-	if(isRestricted && !hasMessage){
-		console.log(chalk.red('Delete: ' + user));
-		await agent.closeAccount();
-		await database.delete('accounts', { email: user });
-	}else if(hasMessage){
-		console.log(chalk.green('Message: ' + user));
-		await sendMail(user);
+	const agent = await createAgent(DEBUG);
+	try{
+		await init(agent, user);
+		const isRestricted = await checkRestrict(agent);
+		const hasMessage = await agent.checkNews();
+		const connects = await checkConnect(agent);
+		console.log(connects)
+		await database.update('accounts', {email: user}, {'$set': {connects}});
+		if(isRestricted && !hasMessage){
+			console.log(chalk.red('Delete: ' + user));
+			await database.delete('accounts', { email: user });
+			await agent.closeAccount();
+		}else if(hasMessage){
+			console.log(chalk.green('Message: ' + user));
+			await sendMail(user);
 
-		//send Mail;
+			//send Mail;
+		}
+		
+	}catch(e){
+		if(e.message == 'closed_account'){
+			await database.delete('accounts', { email: user });
+		}
 	}
-
 	await agent.close();
+
+	
 
 }
 async function main(){
