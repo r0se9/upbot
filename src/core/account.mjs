@@ -18,6 +18,7 @@ import { evaluate, readFileAsync } from "../browser/function.mjs";
 import { wait } from "../utils/time.mjs";
 import Gmail from "../inbox/gmail.mjs";
 import { getRandomElement, imageToBase64 } from "../utils/lib.mjs";
+import EmailFake from "../inbox/emailfake.mjs";
 decorate();
 const PROFILE_PATH = "./static/profiles";
 const AVAILABLE_INBOXes = [
@@ -28,6 +29,7 @@ const AVAILABLE_INBOXes = [
   "dispmail",
   "random",
   "gmail",
+  "emailfake",
 ];
 const GQL_URL = "https://www.upwork.com/api/graphql/v1";
 dotenv.config();
@@ -71,7 +73,7 @@ const argv = yargs(hideBin(process.argv))
   })
   .help()
   .alias("help", "h").argv;
-const LANGUAGE_LEVEL = ['basl', 'conl', 'flul', 'natl'];
+const LANGUAGE_LEVEL = ["basl", "conl", "flul", "natl"];
 function generatePhoneNumber(base) {
   return base.replace(/\*/g, () => Math.floor(Math.random() * 10));
 }
@@ -262,6 +264,8 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     inbox = new DisposableMail(await DisposableMail.create());
   } else if (inboxType === "gmail") {
     inbox = new Gmail(Gmail.create(process.env.GMAIL));
+  } else if (inboxType === "emailfake") {
+    inbox = new EmailFake(await EmailFake.create());
   } else if (inboxType === "random") {
     const MAIL = getRandomElement([
       NoSpamMail,
@@ -407,15 +411,16 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       query:
         "mutation updateTalentLanguageRecords($records: [TalentLanguageInput!]){ \x0a  updateTalentLanguageRecords(records: $records){\x0a    id\x0a  }}",
       variables: {
-        records: profile['languages'].map(el=>({
-            language: {
-              iso639Code: el.code,
-              active: true,
-              englishName: el.name
-            }, proficiencyLevel: {
-              code: LANGUAGE_LEVEL[el.level] 
-            }
-          }))
+        records: profile["languages"].map((el) => ({
+          language: {
+            iso639Code: el.code,
+            active: true,
+            englishName: el.name,
+          },
+          proficiencyLevel: {
+            code: LANGUAGE_LEVEL[el.level],
+          },
+        })),
       },
     });
     console.log(chalk.green("8. Add Language"));
@@ -516,7 +521,6 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
         phoneCode: location.countryCode,
       }
     );
-
 
     console.log(chalk.green("15. Save Address and Phone"));
 
@@ -701,7 +705,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       }
     );
 
-    console.log(chalk.green('17. General Setting'));
+    console.log(chalk.green("17. General Setting"));
     // await evaluate(
     //   upwork.page,
     //   "https://www.upwork.com/freelancers/settings/api/v1/profile/me/profile-access",
@@ -716,15 +720,14 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       "https://www.upwork.com/freelancers/settings/api/v1/profile/me/contractor-tier",
       apiHeaders,
       {
-        contractorTier: 1
+        contractorTier: 1,
       }
     );
 
     console.log("Account has been created...");
-    console.log(chalk.green('==== Check ====='));
+    console.log(chalk.green("==== Check ====="));
     await upwork.getAuth();
     // await upwork.navigate('https://www.upwork.com/nx/find-work/most-recent', {waitUntil:'networkidle0'})
-    
   } catch (e) {
     console.log(chalk.red("Error: while account creation..."));
     console.log(e);
@@ -732,7 +735,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     return false;
   }
   const info = await upwork.getMe();
-  if(!argv.premium){
+  if (!argv.premium) {
     await db.create("accounts", {
       email: inbox.email,
       type: inboxType,
