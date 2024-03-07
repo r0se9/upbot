@@ -367,9 +367,9 @@ export default class Browser{
     await wait(1000*10)
     console.log("[Info] Verifying ...");
     
-    // const url = await inbox.verify();
-    // await this.page.goto(url, { timeout: 45000 });
-    // await wait(5000);
+    const url = await inbox.verify();
+    await this.page.goto(url, { timeout: 45000 });
+    await wait(5000);
   }
   async close(){
     await Promise.race([
