@@ -741,7 +741,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       type: inboxType,
       link: info.identity.ciphertext,
       botName: botName,
-      status: "half",
+      status: "active",
       name: profileName,
       isPremium: false,
     });
