@@ -64,3 +64,28 @@ export async function evaluate(e, t, a, n) {
         a
       );
 }
+export async function evaluate_put(e, t, a, n) {
+  return n
+    ? await e.evaluate(
+        async (e, t, a) => {
+          r = await fetch(e, {
+            method: "PUT",
+            headers: t,
+            credentials: "include",
+            body: JSON.stringify(a),
+          });
+          return r.ok ? await r.json() : null;
+        },
+        t,
+        a,
+        n
+      )
+    : await e.evaluate(
+        async (e, t) => {
+          r = await fetch(e, { headers: t, credentials: "include" });
+          return r.ok ? await r.json() : null;
+        },
+        t,
+        a
+      );
+}
