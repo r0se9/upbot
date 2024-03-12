@@ -17,7 +17,7 @@ import TenMail from "../inbox/tenmail.mjs";
 import { evaluate, evaluate_put, readFileAsync } from "../browser/function.mjs";
 import { wait } from "../utils/time.mjs";
 import Gmail from "../inbox/gmail.mjs";
-import { getRandomElement, imageToBase64, retry } from "../utils/lib.mjs";
+import { getRandomElement, retry, retry_v2 } from "../utils/lib.mjs";
 import EmailFake from "../inbox/emailfake.mjs";
 decorate();
 const PROFILE_PATH = "./static/profiles";
@@ -284,9 +284,22 @@ async function verify(upwork, inboxType, email) {
   await upwork.navigate(url);
   
 }
-
+async function checkConnect(agent) {
+	const result = await retry_v2(e=>e!==undefined, {
+		callback: async ()=>{
+			const resu = await agent.getConnects(); 
+			return resu;
+		},
+		onError: async ()=>{
+			await agent.refresh();
+			await agent.getAuth();
+		}
+	}, 10, 10);
+	return result;
+	// body...
+}
 async function createAgent(email) {
-  const upwork = new Browser(argv.debug);
+  const upwork = new Browser(!argv.debug);
   if (VPN) {
     await upwork.configVPN(path.resolve('static/extensions', '1clickvpn'), 'fcfhplploccackoneaefokcmbjfbkenj')
     await upwork.login_v2({ user: email, password: process.env.PASSWORD });
@@ -308,7 +321,7 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
   }catch(e){
     if(e.message == 'closed_account'){
 			console.log(chalk.red('closed account'))
-			await database.delete('accounts', { email: user });
+			await db.delete('accounts', { email });
 		}
   }
   try {
@@ -317,6 +330,11 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
 
 
     const info = await upwork.getMe();
+    const connects = await checkConnect(upwork);
+    console.log(chalk.green(`Connects: ${connects}`))
+    if(connects!==undefined){
+      await db.update('accounts', {email}, {'$set': {connects}});
+    }
     if (!info.jobCategories) {
       await upwork.getAuth();
       const categories = await getServiceIds(upwork.page, profile.services, upwork.AUTH);
@@ -511,6 +529,7 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
         email: email,
       }, {
         '$set': {
+
           isCompleted: true
         }
       });
