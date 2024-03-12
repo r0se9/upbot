@@ -40,7 +40,7 @@ export async function input(page, selector, key, delay = 0) {
 }
 
 export async function evaluate(e, t, a, n) {
-  return n
+  return n!==null
     ? await e.evaluate(
         async (e, t, a) => {
           r = await fetch(e, {
