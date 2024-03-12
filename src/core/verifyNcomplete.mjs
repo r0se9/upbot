@@ -276,7 +276,7 @@ async function verify(upwork, inboxType, email) {
       generateAPIHeader(undefined, upwork.AUTH["token"]),
       null
     );
-    await wait(1000 * 5)
+    await wait(1000 * 10)
     url = await inbox.verify();
   }
   console.log(chalk.green('We got verification url: ' + url))
