@@ -59,16 +59,10 @@ const argv = yargs(hideBin(process.argv))
     type: "string",
     demandOption: true,
   })
-  .option("bot", {
-    alias: "b",
-    description: "Enter your bot name",
+  .option("number", {
+    alias: "n",
+    description: "Enter the number of accounts to complete",
     type: "string",
-  })
-  .option("premium", {
-    alias: "p",
-    description: "Create Premium version",
-    type: "boolean",
-    default: false,
   })
   .help()
   .alias("help", "h").argv;
@@ -173,6 +167,23 @@ function generateAPIHeader(authToken, csrfToken) {
   );
 }
 
+async function getAccounts(database, user, limit) {
+	const query = { status: 'half', name: user,  '$or': [
+    {
+      isCompleted: {
+        '$ne': true
+      },
+      isVerified: {
+        '$ne': true
+      },
+    }
+  ], isActive: {'$ne': false}};
+	const accounts = await database.get('accounts', query, { limit});
+	console.log(chalk.green(`Pushed ${accounts.length} accounts to the hell....`))
+	return accounts;
+}
+
+
 async function getSkillIds(page, skills, AUTH) {
   const headers = generateAPIHeader(AUTH["oauth"], AUTH['token']);
   const ids = [];
@@ -275,7 +286,7 @@ async function verify(upwork, inboxType, email) {
 }
 
 async function createAgent(email) {
-  const upwork = new Browser(false);
+  const upwork = new Browser(argv.debug);
   if (VPN) {
     await upwork.configVPN(path.resolve('static/extensions', '1clickvpn'), 'fcfhplploccackoneaefokcmbjfbkenj')
     await upwork.login_v2({ user: email, password: process.env.PASSWORD });
@@ -290,7 +301,16 @@ async function createAgent(email) {
   return upwork;
 }
 async function completeAccount(profile, inboxType, profileName, email, db) {
-  const upwork = await createAgent(email);
+  let upwork;
+  try{
+
+     upwork = await createAgent(email);
+  }catch(e){
+    if(e.message == 'closed_account'){
+			console.log(chalk.red('closed account'))
+			await database.delete('accounts', { email: user });
+		}
+  }
   try {
     await upwork.getAuth();
 
@@ -377,6 +397,7 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
       console.log(chalk.green("1. Profile Title"));
 
       let res;
+      await upwork.getAuth();
       res = await evaluate(
         upwork.page,
         "https://www.upwork.com/freelancers/api/v2/profile/me/rate",
@@ -390,7 +411,7 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
       console.log(chalk.green("2. Profile Hourly rate"));
 
 
-
+      await upwork.getAuth();
       res = await evaluate(
         upwork.page,
         "https://www.upwork.com/freelancers/api/v1/profile/me/overview",
@@ -473,8 +494,8 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
             "personUid": null,
             "standardizedInstitutionUid": null,
             "institutionName": ed.university,
-            "dateStarted": ed.start,
-            "dateEnded": ed.end,
+            "dateStarted": `${ed.start}-01-01`,
+            "dateEnded": `${ed.end}-01-01`,
             "standardizedDegreeUid": "1156532285526163456",
             "degree": "Bachelor of Computer Science (BCompSc)",
             "standardizedAreaOfStudyUid": "482305184288899086",
@@ -498,7 +519,7 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
   } catch (e) {
     console.log(e);
   } finally {
-    // await page.close();
+    
     await upwork.close();
     return true;
   }
@@ -512,23 +533,17 @@ async function main() {
   const profile = JSON.parse(rawData);
   const database = new Database(process.env.MONGODB_URI);
   await database.connect();
+  const emails = await getAccounts(database, argv.file, argv.number * 1)
   // console.log(argv.num,argv.mail, process.env.BOT)
-  // for (let index = 0; index < argv.num; index++) {
-  //   console.log(`~~~~~~ ${index + 1} ~~~~~~~`);
-  //   try {
-  //     await createAccount(
-  //       profile,
-  //       argv.mail,
-  //       argv.file,
-  //       argv.bot || process.env.BOT,
-  //       database
-  //     );
-  //   } catch (e) {
-  //     console.log(chalk.red("Error"));
-  //     console.log(e);
-  //   }
-  // }
-  await completeAccount(profile, 'genmail', 'ken', 'we7e94d2a375605370cd85a59@thresholdpc.com', database)
+  for (let email of emails.map(el=>el.email)) {
+    try {
+      console.log(chalk.green(email))
+      await completeAccount(profile, 'genmail', argv.file, email, database)
+    } catch (e) {
+      console.log(chalk.red("Error"));
+      console.log(e);
+    }
+  }
   await database.close();
 }
 
