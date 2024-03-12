@@ -230,7 +230,7 @@ export default class Browser {
         password: password,
       },
     });
-    console.log(JSON.stringify(res))
+    
     if (res.status === 'success' && res.data.userNid && res.data.reactivateAccount !== true) {
       console.log('Success Logged in')
       await this.page.reload();
