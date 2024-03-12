@@ -361,12 +361,6 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     console.log(chalk.yellow(" Profile Process Started"));
     // profile title
 
-    await evaluate(upwork.page, GQL_URL, gqlHeaders, {
-      query:
-        "mutation updateTalentProfileTitle($input: TalentProfileTitleInput!){ \x0a    updateTalentProfileTitle(input: $input){      \x0a      status\x0a    }}",
-      variables: { input: { title: profile["professional"] } },
-    });
-    console.log(chalk.green("5. Add Professional"));
 
     // employement
 
@@ -630,7 +624,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       type: inboxType,
       link: info.identity.ciphertext,
       botName: botName,
-      status: "active",
+      status: "half",
       name: profileName,
       isPremium: false,
     });
@@ -738,7 +732,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       email: inbox.email,
       type: inboxType,
       botName: botName,
-      status: "active",
+      status: "half",
       name: profileName,
       isActive: true,
       isPremium: true,
@@ -750,7 +744,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
       email: inbox.email,
       type: inboxType,
       botName: botName,
-      status: "active",
+      status: "half",
       link: info.identity.ciphertext,
       name: profileName,
       isActive: true,
