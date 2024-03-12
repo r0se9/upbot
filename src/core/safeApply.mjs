@@ -258,7 +258,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT, BIDMODE){
 	if(BIDMODE.isSearch) console.log(chalk.green('Advanced job search: Enabled'))
 
 	while(true){
-		let accounts = await database.get('accounts', { connects:{'$gte': 16 }, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
+		let accounts = await database.get('accounts', { isVerified: true, isCompleted: true, connects:{'$gte': 16 }, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		// let accounts = await database.get('accounts', { status:'active',  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
