@@ -419,7 +419,7 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
       res = await evaluate(
         upwork.page,
         "https://www.upwork.com/freelancers/api/v2/profile/me/rate",
-        apiHeaders,
+        generateAPIHeader(upwork.AUTH["oauth"], upwork.AUTH["token"]),
         {
           "chargedRate": profile.hourRate,
           "earnedRate": null
@@ -433,7 +433,7 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
       res = await evaluate(
         upwork.page,
         "https://www.upwork.com/freelancers/api/v1/profile/me/overview",
-        apiHeaders,
+        generateAPIHeader(upwork.AUTH["oauth"], upwork.AUTH["token"]),
         {
           overview: profile.overview
         }
@@ -553,7 +553,6 @@ async function main() {
   const database = new Database(process.env.MONGODB_URI);
   await database.connect();
   const emails = await getAccounts(database, argv.file, argv.number * 1)
-  // console.log(argv.num,argv.mail, process.env.BOT)
   for (let email of emails.map(el=>el.email)) {
     try {
       console.log(chalk.green(email))
