@@ -11,9 +11,9 @@ const stealth = StealthPlugin();
 puppeteer.use(stealth);
 stealth.enabledEvasions.delete("iframe.contentWindow");
 
-async function request(page, method, url, headers, data) {
+export async function request(page, method, url, headers, data) {
   const config = { method, headers, credentials: 'include' };
-  if (method === 'POST') config.body = JSON.stringify(data || {});
+  if (method === 'POST' && data) config.body = JSON.stringify(data);
   return await page.evaluate(
     async (e, c) => {
       try {
@@ -230,7 +230,7 @@ export default class Browser {
         password: password,
       },
     });
-
+    
     if (res.status === 'success' && res.data.userNid && res.data.reactivateAccount !== true) {
       console.log('Success Logged in')
       await this.page.reload();
@@ -238,7 +238,7 @@ export default class Browser {
     } else if (res.status == 'success' && res.data.reactivateAccount) {
       throw new Error('closed_account');
     }
-    else if (res.status === 'success' && res.data && res.data.alerts && res.data.alerts.top.length) {
+    else if (res.status === 'success' && res.data && res.data.alerts && res.data.alerts.top.some(e=>e.message && e.message.includes('closed'))) {
 
       throw new Error('closed_account');
     }
@@ -314,7 +314,7 @@ export default class Browser {
 
   }
   async login_v2({ user, password }, startUrl = this.AUTH_URL) {
-    console.log('Login...')
+    console.log('Login V2...')
     await this.page.goto(startUrl, { waitUntil: 'networkidle2' });
     const title = await this.page.title();
 
@@ -445,6 +445,7 @@ export default class Browser {
     const result = { token: "", oauth: "", uid: "", oDeskUserID: "" };
     const cookies = await this.page.cookies();
     for (const cookie of cookies) {
+      if(cookie["value"] === '') continue;
       if (cookie["name"] === "XSRF-TOKEN") result["token"] = cookie["value"];
       if (cookie["name"] === "visitor_topnav_gql_token") result["applyToken"] = cookie["value"];
       if (cookie["name"] === "oauth2_global_js_token") result["oauth"] = cookie["value"];
@@ -906,6 +907,22 @@ export default class Browser {
     };
     const res = await request(this.page, "GET", "https://www.upwork.com/nx/plans/membership/change-plan?from=index", headers);
     console.log(res)
+  }
+  async getProfileInfo(){
+    const headers = {
+      Accept: "application/json, text/plain, */*",
+      "Accept-Encoding": "gzip, deflate, br",
+      "Accept-Language": "en-US,en;q=0.9",
+      Authorization: "Bearer " + this.AUTH["oauth"],
+      "Sec-Fetch-Dest": "empty",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Site": "same-origin",
+      "x-odesk-user-agent": "oDesk LM",
+      "x-requested-with": "XMLHttpRequest",
+      "X-Upwork-Accept-Language": "en-US",
+    };
+    const response = await request(this.page, "GET", "https://www.upwork.com/freelancers/api/v1/profile/me/completeness/pci-details", headers)
+    return response.data;
   }
   async checkIdentity() {
     try {

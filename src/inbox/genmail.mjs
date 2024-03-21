@@ -61,7 +61,7 @@ export default class GeneratorMail {
       return undefined;
     }
   }
-  async verify() {
+  async verify(TEMP=20) {
     let href;
     let temp = 0;
     while (true) {
@@ -89,7 +89,7 @@ export default class GeneratorMail {
         return href;
       } else {
         temp += 1;
-        if (temp >= 20) {
+        if (temp >= TEMP) {
           console.log("Limit");
           throw new Error("Verfication Limit reached.");
         }
