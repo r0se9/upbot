@@ -35,6 +35,12 @@ const argv = yargs(hideBin(process.argv))
     type: "string",
     default: '',
   })
+  .option("within", {
+    alias: "w",
+    description: "Enter your profile usernames, separated by |",
+    type: "number",
+    default: 0,
+  })
   .help()
   .alias('help', 'h')
   .argv;
@@ -84,9 +90,13 @@ async function request(page, method, url, headers, data) {
 const database = new Database(process.env.MONGODB_URI)
 await database.connect();
 async function getAccounts() {
-	const query = { status: {'$in':statuses}, isActive: {'$ne': false}};
+	const query = { status: {'$in':statuses}, isActive: {'$ne': false}, createdAt: {
+    $lt: new Date("2024-04-20T00:00:00Z"),
+  }, connects:{$exists:false}};
 	if(users.length) query.name = {'$in': users};
-	const accounts = await database.get('accounts', query);
+	const setting = {};
+	if(argv.within) setting.limit = argv.within, setting.sort = {created:1};
+	const accounts = await database.get('accounts', query, setting);
 	console.log(chalk.green(`Pushed ${accounts.length} accounts to the hell....`))
 	return accounts;
 }

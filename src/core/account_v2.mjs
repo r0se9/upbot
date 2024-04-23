@@ -292,7 +292,7 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
         // `--load-extension=${pathToExtension}`,
       ]
     );
-    console.log("Successfully Verified.");
+    
 
     await upwork.navigate("https://www.upwork.com/nx/create-profile/", {
       waitUntil: "networkidle0",

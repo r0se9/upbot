@@ -236,10 +236,11 @@ export default class Browser {
       await this.page.reload();
       return true;
     } else if (res.status == 'success' && res.data.reactivateAccount) {
+      this.close();
       throw new Error('closed_account');
     }
     else if (res.status === 'success' && res.data && res.data.alerts && res.data.alerts.top.some(e=>e.message && e.message.includes('closed'))) {
-
+      this.close();
       throw new Error('closed_account');
     }
     else {
@@ -425,11 +426,7 @@ export default class Browser {
     let href;
 
     await wait(1000 * 10)
-    console.log("[Info] Verifying ...");
-
-    const url = await inbox.verify();
-    await this.page.goto(url, { timeout: 45000 });
-    await wait(5000);
+    
   }
   async close() {
     await Promise.race([
@@ -657,7 +654,7 @@ export default class Browser {
       "X-Upwork-Accept-Language": "en-US"
     };
     const result = await request(this.page, "POST", "https://www.upwork.com/freelancers/api/v1/profile/me/project", headers, data);
-    console.log(result);
+    
   }
   async searchJobs() {
     const headers = {
