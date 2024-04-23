@@ -180,6 +180,7 @@ async function getSkillIds(page, skills, AUTH) {
   const headers = generateGQLHeader(AUTH["oauth"]);
   const ids = [];
   for (const skill of skills) {
+    console.log(skill);
     const data = {
       query:
         "query ontologyElementsSearchByPrefLabel($filter: OntologyElementsSearchByPrefLabelFilter){ \x0a  ontologyElementsSearchByPrefLabel(filter: $filter){\x0a    id\x0a    ontologyId\x0a    preferredLabel\x0a    ...  on Skill {\x0a      legacySkillNid\x0a    }\x0a  }}",
@@ -250,6 +251,9 @@ async function getLocation(page, city, countryCode, AUTH) {
 async function createAccount(profile, inboxType, profileName, botName, db) {
   const locations = await db.get("locations", { country: profile["country"] });
   const location = getRandomElement(locations);
+
+  const portfolios = await db.get('portfolios', { category: profile.type || ''});
+  
   // console.log(location);
   let inbox;
   if (inboxType === "nospammail") {
@@ -292,6 +296,11 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
         // `--load-extension=${pathToExtension}`,
       ]
     );
+    console.log("[Info] Verifying ...");
+
+    const url = await inbox.verify();
+    await upwork.page.goto(url, { timeout: 45000 });
+    await wait(5000);
     console.log("Successfully Verified.");
 
     await upwork.navigate("https://www.upwork.com/nx/create-profile/", {
@@ -735,6 +744,13 @@ async function createAccount(profile, inboxType, profileName, botName, db) {
     return false;
   }
   const info = await upwork.getMe();
+  if(portfolios.length){
+    for(let port of portfolios[0].projects || []){
+    await upwork.addPortfolio(port);
+  }
+   console.log(chalk.green("18. Portfolio ting"));
+  }
+  
   if (!argv.premium) {
     await db.create("accounts", {
       email: inbox.email,

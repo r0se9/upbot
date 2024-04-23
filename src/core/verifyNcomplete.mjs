@@ -172,8 +172,8 @@ async function getAccounts(database, user, limit) {
     {
       isCompleted: {
         '$ne': true
-      },
-      isVerified: {
+      }},
+      {isVerified: {
         '$ne': true
       },
     }
@@ -231,6 +231,7 @@ async function getServiceIds(page, services, AUTH) {
 
 
 async function verify(upwork, inboxType, email) {
+  
   let inbox;
   if (inboxType === "nospammail") {
     inbox = new NoSpamMail(email);
@@ -313,8 +314,18 @@ async function createAgent(email) {
 
   return upwork;
 }
+async function checkRestrict(agent){
+  const result = await agent.getMe();
+  const restResult = await agent.isRestricted(result.personUid);
+  const identity = await agent.checkIdentity();
+  return (restResult?.data?.data?.developerSuspended?.suspendedStatus || false) || identity;
+
+
+};
+
 async function completeAccount(profile, inboxType, profileName, email, db) {
   let upwork;
+  const portfolios = await db.get('portfolios', { category: profile.type || ''});
   try{
 
      upwork = await createAgent(email);
@@ -322,13 +333,23 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
     if(e.message == 'closed_account'){
 			console.log(chalk.red('closed account'))
 			await db.delete('accounts', { email });
+
+      upwork.close();
+      return;
 		}
   }
   try {
     await upwork.getAuth();
 
 
+    const isRestricted = await checkRestrict(upwork);
 
+    if(isRestricted){
+      console.log(chalk.red('Restricted account'))
+      await db.delete('accounts', { email });
+      upwork.close();
+      return;
+    }
     const info = await upwork.getMe();
     const connects = await checkConnect(upwork);
     console.log(chalk.green(`Connects: ${connects}`))
@@ -525,6 +546,14 @@ async function completeAccount(profile, inboxType, profileName, email, db) {
         console.log(chalk.green("2. Profile Education"));
       }
 
+      if(portfolios.length && profileInfo.detail.portfolio.currentCredit == 0){
+            for(let port of portfolios[0].projects || []){
+            await upwork.addPortfolio(port);
+          }
+           console.log(chalk.green("18. Portfolio ting"));
+       }
+      
+      
       await db.update("accounts", {
         email: email,
       }, {

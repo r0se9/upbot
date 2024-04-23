@@ -222,7 +222,7 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_codeExtended_VJF_CONN_1'){
 
 			console.log(chalk.red('>>>> Insufficient connects....'));
-			database.update('accounts', { email: email }, { '$set': { status: 'applied'}})
+			await database.update('accounts', { email: email }, { '$set': { status: 'applied'}})
 
 		} else if(result && result.data && result.data.error && result.data.error.message_key === 'jpb_Opening_DefaultServerError_ErrorMessage'){
 			
@@ -258,7 +258,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT, BIDMODE){
 	if(BIDMODE.isSearch) console.log(chalk.green('Advanced job search: Enabled'))
 
 	while(true){
-		let accounts = await database.get('accounts', { isVerified: true, isCompleted: true, connects:{'$gte': 16 }, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
+		let accounts = await database.get('accounts', {  status:'active', connects:{'$gte': 22 }, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		// let accounts = await database.get('accounts', { status:'active',  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
