@@ -189,11 +189,16 @@ async function followUp(database, agent, email, job, result, MODE, USER){
 			const opening = await agent.getJobOpening(job.uid);
       		const isRestricted = await checkRestrict(agent);
       		const flRestricted = opening.flSuspended;
-			if(isRestricted || flRestricted){
+      		console.log(isRestricted, flRestricted);
+			if(isRestricted ){
 				console.log(chalk.red('>>>> Account is restricted'));
 				console.log(`delete account with ${email}`)
-        
+        await wait(1000 * 10000);
 				await database.delete('accounts', { email });
+			}
+			else if(flRestricted){
+
+				await database.update('accounts', { email: email }, { '$set': { status: 'strange'}})
 			}
       if(opening.opening.job.info.isPtcPrivate){
 				console.log(chalk.red('>>>> Job is private only'))
@@ -258,7 +263,7 @@ async function main(gpt, database, USER, MODE, DEBUG, USEGPT, BIDMODE){
 	if(BIDMODE.isSearch) console.log(chalk.green('Advanced job search: Enabled'))
 
 	while(true){
-		let accounts = await database.get('accounts', {  status:'active', connects:{'$gte': 22 }, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
+		let accounts = await database.get('accounts', {  status:'half', isVerified: true, connects:{'$gte': 22 }, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		// let accounts = await database.get('accounts', { status:'active',  botName: process.env.BOT, name: USER, isActive: { '$ne': false } }, { sort: {createdAt: -1}});
 		if(accounts.length === 0){
 			console.log(chalk.red('There is no account.'))
